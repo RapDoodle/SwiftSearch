@@ -2,18 +2,24 @@ package ink.repo.search.crawler.fetcher;
 
 import ink.repo.search.crawler.parser.HTMLParser;
 import io.github.bonigarcia.wdm.WebDriverManager;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.jsoup.nodes.Document;
 import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.devtools.DevTools;
+import org.openqa.selenium.devtools.HasDevTools;
+import org.openqa.selenium.devtools.v108.network.Network;
+import org.openqa.selenium.devtools.v108.network.model.Headers;
 
 import java.io.IOException;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 public class SeleniumFetcher implements Fetcher {
-
-    WebDriver driver;
+    private WebDriver driver;
+    private List<Headers> headerList;
 
     public SeleniumFetcher(int timeout, boolean headless) {
         // Automatically setup Chrome driver
@@ -27,6 +33,20 @@ public class SeleniumFetcher implements Fetcher {
         // Startup Chrome
         driver = new ChromeDriver(options);
         driver.manage().timeouts().pageLoadTimeout(timeout, TimeUnit.SECONDS);
+
+        // Listen on headers
+        DevTools devTools = ((HasDevTools) driver).getDevTools();
+        devTools.createSession();
+        devTools.send(Network.enable(Optional.empty(), Optional.empty(), Optional.empty()));
+        devTools.addListener(Network.responseReceived(),
+                responseReceived -> {
+                    if (this.headerList == null)
+                        return;
+                    Headers headers = responseReceived.getResponse().getHeaders();
+                    if (!headers.isEmpty())
+                        this.headerList.add(headers);
+                }
+        );
     }
 
     public SeleniumFetcher() {
@@ -34,7 +54,14 @@ public class SeleniumFetcher implements Fetcher {
     }
 
     @Override
-    public Document fetch(String url) throws IOException, InterruptedException {
+    public ImmutablePair<Map<String, String>, Document> fetch(String url) throws IOException, InterruptedException {
+        // Clear the list of headers
+        if (this.headerList == null)
+            this.headerList = new LinkedList<>();
+        else
+            this.headerList.clear();
+
+        // Fetch from the web
         try {
             driver.get(url);
         } catch (TimeoutException e) {
@@ -42,8 +69,16 @@ public class SeleniumFetcher implements Fetcher {
         }
         String content = driver.getPageSource();
 
+        // Get the request header
+        Map<String, String> headers = new HashMap<>();
+        if (this.headerList.size() >= 1) {
+            this.headerList.get(0).forEach((key,value) -> {
+                headers.put(key, (String) value);
+            });
+        }
+
         // Parse the HTML
-        return HTMLParser.parseHTML(content, url);
+        return new ImmutablePair<>(headers, HTMLParser.parseHTML(content, url));
     }
 
     @Override

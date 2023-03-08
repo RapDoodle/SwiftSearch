@@ -1,6 +1,7 @@
 package ink.repo.search.crawler.fetcher;
 
 import ink.repo.search.crawler.parser.HTMLParser;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.jsoup.nodes.Document;
 
 import java.io.BufferedReader;
@@ -10,6 +11,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.net.http.HttpClient;
 import java.time.Duration;
+import java.util.*;
 
 public class WebFetcher implements Fetcher {
     HttpClient client;
@@ -23,8 +25,17 @@ public class WebFetcher implements Fetcher {
     }
 
     @Override
-    public Document fetch(String url) throws IOException {
+    public ImmutablePair<Map<String, String>, Document> fetch(String url) throws IOException {
         URLConnection connection = new URL(url).openConnection();
+
+        // Get headers
+        Map<String, String> headers = new HashMap<>();
+        Set<String> headerKeys = connection.getHeaderFields().keySet();
+        for (String headerKey : headerKeys) {
+            headers.put(headerKey, connection.getHeaderField(headerKey));
+        }
+
+        // Read page content from buffer
         BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
         StringBuilder html = new StringBuilder();
         String line;
@@ -37,7 +48,7 @@ public class WebFetcher implements Fetcher {
         in.close();
 
         // Parse the HTML
-        return HTMLParser.parseHTML(html.toString(), url);
+        return new ImmutablePair<>(headers, HTMLParser.parseHTML(html.toString(), url));
     }
 
     @Override

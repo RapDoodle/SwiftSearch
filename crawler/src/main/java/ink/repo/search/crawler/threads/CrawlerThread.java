@@ -3,10 +3,12 @@ package ink.repo.search.crawler.threads;
 import ink.repo.search.crawler.acl.ACL;
 import ink.repo.search.crawler.fetcher.Fetcher;
 import ink.repo.search.crawler.fetcher.SeleniumFetcher;
+import ink.repo.search.crawler.fetcher.WebFetcher;
 import ink.repo.search.crawler.model.CrawlerTask;
 import ink.repo.search.crawler.model.WebPage;
 import ink.repo.search.crawler.repository.CrawlerTaskRepository;
 import ink.repo.search.crawler.repository.WebPageRepository;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
@@ -17,12 +19,11 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.Optional;
-import java.util.Queue;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 @Component
 @Scope("application")
@@ -70,7 +71,8 @@ public class CrawlerThread implements Runnable {
         String baseUrl = crawlerTask.getBaseUrl();
         queue.add(baseUrl);
         int level = 0, visitCount = 0;
-        Fetcher fetcher = new SeleniumFetcher(5, true);
+         Fetcher fetcher = new SeleniumFetcher(5, true);
+//        Fetcher fetcher = new WebFetcher();
         while (!queue.isEmpty() && maxDepth-- > 0) {
             int levelSize = queue.size();
             while (levelSize-- > 0 && maxVisits-- > 0) {
@@ -87,15 +89,34 @@ public class CrawlerThread implements Runnable {
                 ++visitCount;
                 System.out.println("[" + level + "][" + visitCount + "] Visiting " + currUrl);
                 try {
-                    Document html = fetcher.fetch(currUrl);
+                    ImmutablePair<Map<String, String>, Document> res = fetcher.fetch(currUrl);
+                    Map<String, String> headers = res.left;
+                    Document html = res.right;
+
+                    // DB object
+                    Optional<WebPage> dbFetchRes = webPageRepository.findById(currUrl);
+                    WebPage webPage = null;
+                    if (dbFetchRes.isPresent()) {
+                        webPage = dbFetchRes.get();
+                    } else {
+                        webPage = new WebPage();
+                    }
+
+                    // Skip if the web page has not been modified
+                    boolean fetch = true;
+                    Date lastModifiedDate = null;
+                    if (headers.getOrDefault("Last-Modified", null) != null) {
+                        SimpleDateFormat formatter = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z");
+                        lastModifiedDate = formatter.parse(headers.get("Last-Modified"));
+                        if (webPage.getLastFetchedDate() != null && lastModifiedDate.compareTo(webPage.getLastFetchedDate()) < 0) {
+                            System.out.println("Already fetched " + currUrl);
+                            fetch = false;
+                        }
+                    }
+
                     Elements links = html.getElementsByTag("a");
                     System.out.println("Found " + links.size() + " links.");
                     visitedUrls.add(currUrl);
-
-                    // DB object
-                    WebPage webPage = new WebPage();
-                    webPage.setUrl(currUrl);
-                    webPage.setContent(html.html());
 
                     // Links
                     LinkedList<String> currUrlLinks = new LinkedList<>();
@@ -103,7 +124,7 @@ public class CrawlerThread implements Runnable {
                         String linkUrl;
                         try {
                             linkUrl = new URL(link.absUrl("href")).toURI().toString();
-                        } catch (URISyntaxException e) {
+                        } catch (URISyntaxException | MalformedURLException e) {
                             continue;
                         }
                         currUrlLinks.add(linkUrl);
@@ -112,8 +133,18 @@ public class CrawlerThread implements Runnable {
                         queue.add(linkUrl);
                     }
 
-                    webPage.setLinks(currUrlLinks);
-                    webPageRepository.save(webPage);
+                    if (fetch) {
+                        // Save contents
+                        webPage.setUrl(currUrl);
+                        webPage.setContent(html.html());
+                        webPage.setHeaders(headers);
+                        if (webPage.getCreatedDate() == null)
+                            webPage.setCreatedDate(new Date());
+                        webPage.setLastModifiedDate(lastModifiedDate);
+                        webPage.setLastFetchedDate(new Date());
+                        webPage.setLinks(currUrlLinks);
+                        webPageRepository.save(webPage);
+                    }
                 } catch (IOException | InterruptedException e) {
                     e.printStackTrace();
                 } catch (Exception e) {
