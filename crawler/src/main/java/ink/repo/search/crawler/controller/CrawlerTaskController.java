@@ -1,7 +1,8 @@
 package ink.repo.search.crawler.controller;
 
 import ink.repo.search.crawler.dto.CrawlerTaskRequest;
-import ink.repo.search.crawler.services.CrawlerTaskService;
+import ink.repo.search.crawler.exception.AttributeAlreadyDefinedException;
+import ink.repo.search.crawler.service.CrawlerTaskService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -16,7 +17,7 @@ public class CrawlerTaskController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public CrawlerTaskRequest createCrawlerTask(@RequestBody CrawlerTaskRequest crawlerTaskRequest) {
+    public CrawlerTaskRequest createCrawlerTask(@RequestBody CrawlerTaskRequest crawlerTaskRequest) throws AttributeAlreadyDefinedException {
         System.out.println(crawlerTaskRequest);
         crawlerTaskService.createCrawlerTask(crawlerTaskRequest);
         return crawlerTaskRequest;

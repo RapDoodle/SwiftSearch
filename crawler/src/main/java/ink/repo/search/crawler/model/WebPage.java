@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
@@ -20,12 +21,14 @@ import java.util.Map;
 @Data
 public class WebPage {
     @Id
-    String url;
-    String title;
-    Date createdDate;
-    Date lastFetchedDate;
-    Date lastModifiedDate;
-    String content;
-    List<String> links;
-    Map<String, String> headers;
+    private String id;
+    @Indexed
+    private String url;
+    private String title;
+    private Date createdDate;
+    private Date lastFetchedDate;
+    private Date lastModifiedDate;
+    private String content;
+    private List<String> links;
+    private Map<String, String> headers;
 }

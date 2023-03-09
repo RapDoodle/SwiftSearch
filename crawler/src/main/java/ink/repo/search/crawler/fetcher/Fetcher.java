@@ -1,5 +1,6 @@
 package ink.repo.search.crawler.fetcher;
 
+import ink.repo.search.crawler.model.FetcherResponse;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.jsoup.nodes.Document;
 
@@ -9,7 +10,7 @@ import java.util.Map;
 
 public interface Fetcher {
 
-    ImmutablePair<Map<String, String>, Document> fetch(String url) throws IOException, InterruptedException;
+    FetcherResponse fetch(String url) throws IOException, InterruptedException;
 
     void close();
 }

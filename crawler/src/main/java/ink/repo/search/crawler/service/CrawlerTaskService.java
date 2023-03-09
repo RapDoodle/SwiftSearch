@@ -1,6 +1,7 @@
-package ink.repo.search.crawler.services;
+package ink.repo.search.crawler.service;
 
 import ink.repo.search.crawler.dto.CrawlerTaskRequest;
+import ink.repo.search.crawler.exception.AttributeAlreadyDefinedException;
 import ink.repo.search.crawler.model.CrawlerTask;
 import ink.repo.search.crawler.repository.CrawlerTaskRepository;
 import ink.repo.search.crawler.threads.CrawlerThread;
@@ -22,7 +23,7 @@ public class CrawlerTaskService {
     @Autowired
     private ApplicationContext applicationContext;
 
-    public void createCrawlerTask(CrawlerTaskRequest crawlerTaskRequest) {
+    public void createCrawlerTask(CrawlerTaskRequest crawlerTaskRequest) throws AttributeAlreadyDefinedException {
         CrawlerTask crawlerTask = new CrawlerTask();
         crawlerTask.setBaseUrl(crawlerTaskRequest.getBaseUrl());
         crawlerTask.setAcl(crawlerTaskRequest.getAcl());

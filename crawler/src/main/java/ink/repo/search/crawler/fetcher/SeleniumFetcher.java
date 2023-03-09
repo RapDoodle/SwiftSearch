@@ -1,5 +1,6 @@
 package ink.repo.search.crawler.fetcher;
 
+import ink.repo.search.crawler.model.FetcherResponse;
 import ink.repo.search.crawler.parser.HTMLParser;
 import io.github.bonigarcia.wdm.WebDriverManager;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -54,7 +55,7 @@ public class SeleniumFetcher implements Fetcher {
     }
 
     @Override
-    public ImmutablePair<Map<String, String>, Document> fetch(String url) throws IOException, InterruptedException {
+    public FetcherResponse fetch(String url) throws IOException, InterruptedException {
         // Clear the list of headers
         if (this.headerList == null)
             this.headerList = new LinkedList<>();
@@ -77,8 +78,14 @@ public class SeleniumFetcher implements Fetcher {
             });
         }
 
-        // Parse the HTML
-        return new ImmutablePair<>(headers, HTMLParser.parseHTML(content, url));
+        // Response
+        Document parsedHTML = HTMLParser.parseHTML(content, url);
+        FetcherResponse fetcherResponse = new FetcherResponse();
+        fetcherResponse.setUrl(url);
+        fetcherResponse.setContent(parsedHTML);
+        fetcherResponse.setTitle(driver.getTitle());
+        fetcherResponse.setHeaders(headers);
+        return fetcherResponse;
     }
 
     @Override

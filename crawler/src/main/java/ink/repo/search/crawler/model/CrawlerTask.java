@@ -13,6 +13,8 @@ import java.time.LocalDateTime;
 import java.time.temporal.Temporal;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Document(value = "tasks")
 @AllArgsConstructor
@@ -30,11 +32,10 @@ public class CrawlerTask {
     private String baseUrl;
     private int taskStatus = TASK_CREATED;
     private List<String> acl;
-//    @DBRef(lazy = true)
-//    private List<WebPage> webPages;
     @CreatedDate
     private LocalDateTime createdAt;
     private Integer maxDepth;
     private Integer maxVisits;
     private List<String> visitedUrls;
+    private Map<String, Set<String>> parentPointers;
 }
