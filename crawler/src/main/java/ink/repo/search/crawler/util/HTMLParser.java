@@ -1,4 +1,4 @@
-package ink.repo.search.crawler.parser;
+package ink.repo.search.crawler.util;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;

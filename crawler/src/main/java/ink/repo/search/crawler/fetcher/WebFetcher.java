@@ -1,8 +1,7 @@
 package ink.repo.search.crawler.fetcher;
 
 import ink.repo.search.crawler.model.FetcherResponse;
-import ink.repo.search.crawler.parser.HTMLParser;
-import org.apache.commons.lang3.tuple.ImmutablePair;
+import ink.repo.search.crawler.util.HTMLParser;
 import org.jsoup.nodes.Document;
 
 import java.io.BufferedReader;

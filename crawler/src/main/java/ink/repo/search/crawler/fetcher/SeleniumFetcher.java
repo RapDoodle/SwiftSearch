@@ -1,9 +1,8 @@
 package ink.repo.search.crawler.fetcher;
 
 import ink.repo.search.crawler.model.FetcherResponse;
-import ink.repo.search.crawler.parser.HTMLParser;
+import ink.repo.search.crawler.util.HTMLParser;
 import io.github.bonigarcia.wdm.WebDriverManager;
-import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.jsoup.nodes.Document;
 import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriver;
@@ -30,6 +29,10 @@ public class SeleniumFetcher implements Fetcher {
         ChromeOptions options = new ChromeOptions();
         if (headless)
             options.addArguments("--headless");
+        // Disable file download
+        Map<String, Object> prefs = new HashMap<>();
+        prefs.put("download_restrictions", 3);
+        options.setExperimentalOption("prefs", prefs);
 
         // Startup Chrome
         driver = new ChromeDriver(options);

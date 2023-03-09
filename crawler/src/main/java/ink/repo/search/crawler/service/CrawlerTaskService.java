@@ -16,6 +16,8 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -45,6 +47,7 @@ public class CrawlerTaskService {
         crawlerTaskResponse.setVisitedUrls(crawlerTask.getVisitedUrls());
         crawlerTaskResponse.setVisitedCount(crawlerTask.getVisitedUrls().size());
         crawlerTaskResponse.setCreatedAt(crawlerTask.getCreatedAt());
+        crawlerTaskResponse.setParentPointers(crawlerTask.getParentPointers());
 
         return crawlerTaskResponse;
     }

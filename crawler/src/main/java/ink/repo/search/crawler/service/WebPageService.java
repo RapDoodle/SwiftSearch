@@ -1,6 +1,5 @@
 package ink.repo.search.crawler.service;
 
-import ink.repo.search.crawler.dto.CrawlerTaskResponse;
 import ink.repo.search.crawler.dto.WebPageRequest;
 import ink.repo.search.crawler.dto.WebPageResponse;
 import ink.repo.search.crawler.exception.ArgumentNotFoundException;

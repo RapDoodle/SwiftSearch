@@ -6,8 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 @Data
 @Builder
@@ -20,4 +19,5 @@ public class CrawlerTaskResponse {
     private LocalDateTime createdAt;
     private Integer visitedCount;
     private List<String> visitedUrls;
+    private Map<String, Set<String>> parentPointers;
 }
