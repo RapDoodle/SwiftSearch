@@ -1,7 +1,11 @@
 package ink.repo.search.crawler.controller;
 
 import ink.repo.search.crawler.dto.CrawlerTaskRequest;
+import ink.repo.search.crawler.dto.CrawlerTaskResponse;
+import ink.repo.search.crawler.exception.AlreadyStoppedException;
+import ink.repo.search.crawler.exception.ArgumentNotFoundException;
 import ink.repo.search.crawler.exception.AttributeAlreadyDefinedException;
+import ink.repo.search.crawler.exception.NotFoundException;
 import ink.repo.search.crawler.service.CrawlerTaskService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,11 +19,21 @@ public class CrawlerTaskController {
     @Autowired
     private CrawlerTaskService crawlerTaskService;
 
+    @GetMapping
+    @ResponseStatus(HttpStatus.OK)
+    public CrawlerTaskResponse getCrawlerTask(CrawlerTaskRequest crawlerTaskRequest) throws NotFoundException, ArgumentNotFoundException {
+        return crawlerTaskService.getCrawlerTask(crawlerTaskRequest);
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public CrawlerTaskRequest createCrawlerTask(@RequestBody CrawlerTaskRequest crawlerTaskRequest) throws AttributeAlreadyDefinedException {
-        System.out.println(crawlerTaskRequest);
-        crawlerTaskService.createCrawlerTask(crawlerTaskRequest);
-        return crawlerTaskRequest;
+    public CrawlerTaskResponse createCrawlerTask(@RequestBody CrawlerTaskRequest crawlerTaskRequest) throws AttributeAlreadyDefinedException {
+        return crawlerTaskService.createCrawlerTask(crawlerTaskRequest);
+    }
+
+    @DeleteMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public CrawlerTaskResponse deleteCrawlerTask(@RequestBody CrawlerTaskRequest crawlerTaskRequest) throws NotFoundException, AlreadyStoppedException {
+        return crawlerTaskService.deleteCrawlerTask(crawlerTaskRequest);
     }
 }

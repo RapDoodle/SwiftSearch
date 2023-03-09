@@ -151,15 +151,16 @@ public class CrawlerThread implements Runnable {
                         if (webPage.getCreatedDate() == null)
                             webPage.setCreatedDate(new Date());
                         webPage.setLastModifiedDate(lastModifiedDate);
-                        webPage.setLastFetchedDate(new Date());
                         webPage.setLinks(currUrlLinks);
-                        webPageRepository.save(webPage);
+
                         if (!urlToObjectIdMapping.containsKey(currUrl)) {
                             // Migrate everything in urlToParentUrlsMapping to objectIdToParentUrlsMapping
                             this.objectIdToParentUrlsMapping.put(webPage.getId(), urlToParentUrlsMapping.getOrDefault(currUrl, new HashSet<>()));
                             this.urlToObjectIdMapping.put(webPage.getId(), currUrl);
                         }
                     }
+                    webPage.setLastFetchedDate(new Date());
+                    webPageRepository.save(webPage);
                 } catch (IOException | InterruptedException e) {
                     e.printStackTrace();
                 } catch (Exception e) {

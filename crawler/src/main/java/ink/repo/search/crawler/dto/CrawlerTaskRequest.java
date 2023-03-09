@@ -9,8 +9,8 @@ import java.util.LinkedList;
 @AllArgsConstructor
 @NoArgsConstructor
 public class CrawlerTaskRequest {
+    private String taskId;
     private String taskName;
-    @NonNull
     private String baseUrl;
     private Integer maxDepth;
     private Integer maxVisits;
