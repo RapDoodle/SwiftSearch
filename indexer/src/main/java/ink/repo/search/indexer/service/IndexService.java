@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class IndexTaskService {
+public class IndexService {
     @Autowired
     private final IndexTaskRepository indexTaskRepository;
     @Autowired
@@ -36,8 +36,5 @@ public class IndexTaskService {
         BuildIndexThread buildIndexThread = applicationContext.getBean(BuildIndexThread.class);
         buildIndexThread.setTaskId(indexTask.getId());
         taskExecutor.execute(buildIndexThread);
-
-        // Update all IDF
-        // We have n,
     }
 }

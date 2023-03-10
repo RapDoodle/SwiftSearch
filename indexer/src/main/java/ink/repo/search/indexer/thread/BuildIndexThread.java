@@ -22,6 +22,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 
 @Component
@@ -67,18 +68,17 @@ public class BuildIndexThread implements Runnable {
                     .retrieve()
                     .bodyToMono(CrawlerTaskResponse.class)
                     .block();
-
-            ConcurrentMap<String, InvertedIndexEntry> invertedIndexEntryMap = new ConcurrentHashMap<>();
-
             if (crawlerTaskResponse == null)
                 return;
+
+            // Create inverted index
+            ConcurrentMap<String, InvertedIndexEntry> invertedIndexEntryMap = new ConcurrentHashMap<>();
 
             // Process the crawled content of each url visited by the crawler
             List<String> visitedUrls = crawlerTaskResponse.getVisitedUrls();
             visitedUrls.stream().parallel().forEach((url) -> {
                 if (this.isTerminated)
                     return;
-
 
                 // Fetch web pages from crawler
                 WebPageResponse webPageResponse = webClientBuilder.build().get()
@@ -120,7 +120,7 @@ public class BuildIndexThread implements Runnable {
                 indexedWebPage.setLastModifiedDate(webPageResponse.getLastModifiedDate());
                 indexedWebPage.setHtml(webPageResponse.getContent());
                 indexedWebPage.setReferencesTo(webPageResponse.getLinks());
-                indexedWebPage.setReferencedBy(crawlerTaskResponse.getParentPointers().getOrDefault(webPageResponse.getId(), new LinkedList<>()));
+                indexedWebPage.setReferencedBy(crawlerTaskResponse.getParentPointers().getOrDefault(webPageResponse.getId(), new ArrayList<>()));
                 indexedWebPage.setPlainText(plainTextPage);
                 indexedWebPage.setStemmedText(stemmedText);
                 indexedWebPage.setWordFrequencies(wordFrequencies);
@@ -131,23 +131,27 @@ public class BuildIndexThread implements Runnable {
                 IndexedWebPage finalIndexedWebPage = indexedWebPage;
                 for (String word : indexedWebPage.getWordFrequencies().keySet()) {
                     invertedIndexEntryMap.computeIfAbsent(word, (key) -> {
-                        InvertedIndexEntry invertedIndexEntry = null;
-                        if (!invertedIndexEntryMap.containsKey(word)) {
-                            invertedIndexEntry = new InvertedIndexEntry();
-                            invertedIndexEntry.setWord(word);
-                            invertedIndexEntry.setWebPages(new LinkedList<>());
-                        } else {
-                            invertedIndexEntry = invertedIndexEntryMap.get(word);
-                        }
-                        invertedIndexEntry.getWebPages().add(finalIndexedWebPage.getId());
+                        InvertedIndexEntry invertedIndexEntry = new InvertedIndexEntry();
+                        invertedIndexEntry.setWord(word);
+                        invertedIndexEntry.setWebPagesConcurrent(new ConcurrentLinkedQueue<>());
                         return invertedIndexEntry;
                     });
+                    invertedIndexEntryMap.get(word).getWebPagesConcurrent().add(finalIndexedWebPage.getId());
                 }
+            });
+
+            // Migrate all InvertedIndexEntry's webPagesConcurrent (ConcurrentLinkedQueue)
+            // to webPages (ArrayList)
+            invertedIndexEntryMap.keySet().stream().parallel().forEach((key) -> {
+                InvertedIndexEntry indexEntry = invertedIndexEntryMap.get(key);
+                indexEntry.setWebPages(new ArrayList<>(indexEntry.getWebPagesConcurrent().size()));
+                indexEntry.getWebPages().addAll(indexEntry.getWebPagesConcurrent());
+                indexEntry.setWebPagesConcurrent(null);
             });
 
             // Merge with the master index
             // Assuming the urls have never been processed before
-            List<InvertedIndexEntry> items = new LinkedList<>();
+            List<InvertedIndexEntry> items = new ArrayList<>();
             for (String word : invertedIndexEntryMap.keySet()) {
                 Optional<InvertedIndexEntry> invertedIndexEntryOpt = invertedIndexEntryRepository.findInvertedIndexEntriesByWord(word);
                 if (invertedIndexEntryOpt.isEmpty()) {
@@ -171,15 +175,11 @@ public class BuildIndexThread implements Runnable {
             indexTask.setTaskStatus(IndexTask.TASK_STATUS_FINISHED);
             indexTask.setDuration(System.currentTimeMillis() - before);
             indexTaskRepository.save(indexTask);
-
-
-            long n = invertedIndexEntryRepository.count();
         } catch (Exception e) {
             e.printStackTrace();
             indexTask.setTaskStatus(IndexTask.TASK_STATUS_ERROR);
             indexTaskRepository.save(indexTask);
         }
-
     }
 
     private void checkStopped() throws NotFoundException {

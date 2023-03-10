@@ -9,6 +9,7 @@ import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 @Document(value = "invertedIndex")
 @AllArgsConstructor
@@ -19,4 +20,6 @@ public class InvertedIndexEntry {
     @Id
     private String word;
     private List<String> webPages;
+    private Double idf;
+    private ConcurrentLinkedQueue<String> webPagesConcurrent;
 }
