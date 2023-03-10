@@ -42,6 +42,7 @@ public class WebPageService {
         response.setId(webPage.getId());
         response.setUrl(webPage.getUrl());
         response.setTitle(webPage.getTitle());
+        response.setResponseStatusCode(webPage.getResponseStatusCode());
         response.setHeaders(webPage.getHeaders());
         response.setContent(webPage.getContent());
         response.setLinks(webPage.getLinks());

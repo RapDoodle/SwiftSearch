@@ -7,6 +7,7 @@ import org.jsoup.nodes.Document;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.http.HttpClient;
@@ -26,12 +27,13 @@ public class WebFetcher implements Fetcher {
 
     @Override
     public FetcherResponse fetch(String url) throws IOException {
-        URLConnection connection = new URL(url).openConnection();
+        HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
 
         // Get headers
         Map<String, String> headers = new HashMap<>();
         Set<String> headerKeys = connection.getHeaderFields().keySet();
         for (String headerKey : headerKeys) {
+            if (headerKey != null)
             headers.put(headerKey, connection.getHeaderField(headerKey));
         }
 
@@ -54,6 +56,7 @@ public class WebFetcher implements Fetcher {
         fetcherResponse.setContent(parsedHTML);
         fetcherResponse.setTitle(parsedHTML.title());
         fetcherResponse.setHeaders(headers);
+        fetcherResponse.setResponseStatusCode(connection.getResponseCode());
         return fetcherResponse;
     }
 

@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 public class SeleniumFetcher implements Fetcher {
     private WebDriver driver;
     private List<Headers> headerList;
+    private Integer currResponseStatusCode;
 
     public SeleniumFetcher(int timeout, boolean headless) {
         // Automatically setup Chrome driver
@@ -43,12 +44,19 @@ public class SeleniumFetcher implements Fetcher {
         devTools.createSession();
         devTools.send(Network.enable(Optional.empty(), Optional.empty(), Optional.empty()));
         devTools.addListener(Network.responseReceived(),
-                responseReceived -> {
+                response -> {
                     if (this.headerList == null)
                         return;
-                    Headers headers = responseReceived.getResponse().getHeaders();
+                    Headers headers = response.getResponse().getHeaders();
                     if (!headers.isEmpty())
                         this.headerList.add(headers);
+                    if (this.currResponseStatusCode == null) {
+                        // Only store the first response status code for each fetch
+                        if (response.getResponse().getStatus() == null)
+                            this.currResponseStatusCode = -1;
+                        else
+                            this.currResponseStatusCode = response.getResponse().getStatus();
+                    }
                 }
         );
     }
@@ -64,6 +72,10 @@ public class SeleniumFetcher implements Fetcher {
             this.headerList = new ArrayList<>();
         else
             this.headerList.clear();
+
+        // Set the current response code to null to obtain the first response code
+        // from the first request received
+        this.currResponseStatusCode = null;
 
         // Fetch from the web
         try {
@@ -88,6 +100,7 @@ public class SeleniumFetcher implements Fetcher {
         fetcherResponse.setContent(parsedHTML);
         fetcherResponse.setTitle(driver.getTitle());
         fetcherResponse.setHeaders(headers);
+        fetcherResponse.setResponseStatusCode(this.currResponseStatusCode);
         return fetcherResponse;
     }
 

@@ -17,4 +17,5 @@ public class FetcherResponse {
     private String title;
     private Document content;
     private Map<String, String> headers;
+    private Integer responseStatusCode;
 }

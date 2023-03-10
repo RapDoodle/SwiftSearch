@@ -17,6 +17,7 @@ public class WebPageResponse {
     private String id;
     private String url;
     private String title;
+    private Integer responseStatusCode;
     private Date createdDate;
     private Date lastFetchedDate;
     private Date lastModifiedDate;

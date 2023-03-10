@@ -35,4 +35,5 @@ public class WebPage {
     private String content;
     private List<String> links;
     private Map<String, String> headers;
+    private Integer responseStatusCode;
 }

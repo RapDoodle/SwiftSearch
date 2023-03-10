@@ -4,6 +4,7 @@ import ink.repo.search.crawler.acl.ACL;
 import ink.repo.search.crawler.exception.AttributeAlreadyDefinedException;
 import ink.repo.search.crawler.fetcher.Fetcher;
 import ink.repo.search.crawler.fetcher.SeleniumFetcher;
+import ink.repo.search.crawler.fetcher.WebFetcher;
 import ink.repo.search.crawler.model.CrawlerTask;
 import ink.repo.search.crawler.model.FetcherResponse;
 import ink.repo.search.crawler.model.WebPage;
@@ -35,9 +36,9 @@ public class CrawlerThread implements Runnable {
     @Autowired
     private WebPageRepository webPageRepository;
     private ArrayList<String> urls;
-    Map<String, Set<String>> urlToParentUrlsMapping = new HashMap<>();
-    Map<String, Set<String>> objectIdToParentUrlsMapping = new HashMap<>();
-    Map<String, String> urlToObjectIdMapping = new HashMap<>();
+    private Map<String, Set<String>> urlToParentUrlsMapping = new HashMap<>();
+    private Map<String, Set<String>> objectIdToParentUrlsMapping = new HashMap<>();
+    private Map<String, String> urlToObjectIdMapping = new HashMap<>();
 
     public void setTaskId(String taskId) throws AttributeAlreadyDefinedException {
         if (this.taskId != null)
@@ -72,7 +73,8 @@ public class CrawlerThread implements Runnable {
         String baseUrl = crawlerTask.getBaseUrl();
         queue.add(baseUrl);
         int level = 0, visitCount = 0;
-         Fetcher fetcher = new SeleniumFetcher(5, true);
+        // Fetcher fetcher = new SeleniumFetcher(5, false);
+        Fetcher fetcher = new WebFetcher();
         while (!queue.isEmpty() && maxDepth-- > 0) {
             int levelSize = queue.size();
             while (levelSize-- > 0 && maxVisits-- > 0) {
@@ -98,7 +100,10 @@ public class CrawlerThread implements Runnable {
                     // DB object
                     Optional<WebPage> dbFetchRes = webPageRepository.findByUrl(currUrl);
                     WebPage webPage = null;
-                    webPage = dbFetchRes.orElseGet(WebPage::new);
+                    if (dbFetchRes.isEmpty())
+                        webPage = new WebPage();
+                    else
+                        webPage = dbFetchRes.get();
 
                     // Skip if the web page has not been modified
                     boolean fetch = true;
@@ -106,7 +111,11 @@ public class CrawlerThread implements Runnable {
                     if (headers.getOrDefault("Last-Modified", null) != null) {
                         SimpleDateFormat formatter = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z");
                         lastModifiedDate = formatter.parse(headers.get("Last-Modified"));
-                        if (webPage.getLastFetchedDate() != null && lastModifiedDate.compareTo(webPage.getLastFetchedDate()) < 0) {
+                        if (webPage.getResponseStatusCode() != null &&
+                                webPage.getResponseStatusCode() >= 200 &&
+                                webPage.getResponseStatusCode() <= 299 &&
+                                webPage.getLastFetchedDate() != null &&
+                                lastModifiedDate.compareTo(webPage.getLastFetchedDate()) < 0) {
                             System.out.println("Already fetched " + currUrl);
                             fetch = false;
                         }
@@ -148,6 +157,7 @@ public class CrawlerThread implements Runnable {
                         webPage.setTitle(fetcherResponse.getTitle());
                         webPage.setContent(html.html());
                         webPage.setHeaders(headers);
+                        webPage.setResponseStatusCode(fetcherResponse.getResponseStatusCode());
                         if (webPage.getCreatedDate() == null)
                             webPage.setCreatedDate(new Date());
                         webPage.setLastModifiedDate(lastModifiedDate);

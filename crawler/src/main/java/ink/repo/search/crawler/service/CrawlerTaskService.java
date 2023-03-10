@@ -43,7 +43,8 @@ public class CrawlerTaskService {
         crawlerTaskResponse.setBaseUrl(crawlerTask.getBaseUrl());
         crawlerTaskResponse.setTaskStatus(crawlerTask.getTaskStatus());
         crawlerTaskResponse.setVisitedUrls(crawlerTask.getVisitedUrls());
-        crawlerTaskResponse.setVisitedCount(crawlerTask.getVisitedUrls().size());
+        if (crawlerTask.getVisitedUrls() != null)
+            crawlerTaskResponse.setVisitedCount(crawlerTask.getVisitedUrls().size());
         crawlerTaskResponse.setCreatedAt(crawlerTask.getCreatedAt());
         crawlerTaskResponse.setParentPointers(crawlerTask.getParentPointers());
 
