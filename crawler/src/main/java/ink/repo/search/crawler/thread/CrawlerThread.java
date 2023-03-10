@@ -1,4 +1,4 @@
-package ink.repo.search.crawler.threads;
+package ink.repo.search.crawler.thread;
 
 import ink.repo.search.crawler.acl.ACL;
 import ink.repo.search.crawler.exception.AttributeAlreadyDefinedException;
@@ -206,7 +206,7 @@ public class CrawlerThread implements Runnable {
 
     private CrawlerTask getCurrentCrawlerTask() {
         Optional<CrawlerTask> optional = crawlerTaskRepository.findById(this.taskId);
-        if (!optional.isPresent())
+        if (optional.isEmpty())
             throw new NotFoundException("Object " + this.taskId + " not found.");
         return optional.get();
     }
