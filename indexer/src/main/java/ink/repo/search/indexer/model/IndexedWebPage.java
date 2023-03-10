@@ -32,4 +32,5 @@ public class IndexedWebPage {
     private Map<String, Integer> wordFrequencies;
     private List<String> referencedBy;
     private List<String> referencesTo;
+    private Double pageRank;
 }
