@@ -2,7 +2,7 @@ package ink.repo.search.crawler.dto;
 
 import lombok.*;
 
-import java.util.LinkedList;
+import java.util.List;
 
 @Data
 @Builder
@@ -14,5 +14,5 @@ public class CrawlerTaskRequest {
     private String baseUrl;
     private Integer maxDepth;
     private Integer maxVisits;
-    private LinkedList<String> acl;
+    private List<String> acl;
 }

@@ -61,7 +61,7 @@ public class SeleniumFetcher implements Fetcher {
     public FetcherResponse fetch(String url) throws IOException, InterruptedException {
         // Clear the list of headers
         if (this.headerList == null)
-            this.headerList = new LinkedList<>();
+            this.headerList = new ArrayList<>();
         else
             this.headerList.clear();
 

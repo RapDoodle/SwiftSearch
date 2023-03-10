@@ -34,7 +34,7 @@ public class CrawlerThread implements Runnable {
     private CrawlerTaskRepository crawlerTaskRepository;
     @Autowired
     private WebPageRepository webPageRepository;
-    private LinkedList<String> urls;
+    private ArrayList<String> urls;
     Map<String, Set<String>> urlToParentUrlsMapping = new HashMap<>();
     Map<String, Set<String>> objectIdToParentUrlsMapping = new HashMap<>();
     Map<String, String> urlToObjectIdMapping = new HashMap<>();
@@ -64,7 +64,7 @@ public class CrawlerThread implements Runnable {
         acl.addAllowRules(crawlerTask.getAcl());
 
         // Store the list of visited urls for this task
-        this.urls = new LinkedList<>();
+        this.urls = new ArrayList<>();
 
         // Visit websites with BFS
         HashSet<String> visitedUrls = new HashSet<>();
@@ -117,7 +117,7 @@ public class CrawlerThread implements Runnable {
                     visitedUrls.add(currUrl);
 
                     // The list of links the currUrl references to
-                    LinkedList<String> currUrlLinks = new LinkedList<>();
+                    ArrayList<String> currUrlLinks = new ArrayList<>();
                     for (Element link : links) {
                         String linkUrl;
                         try {
@@ -191,7 +191,7 @@ public class CrawlerThread implements Runnable {
         // Flush crawled urls
         if (this.urls != null && this.urls.size() > 0) {
             if (crawlerTask.getVisitedUrls() == null)
-                crawlerTask.setVisitedUrls(new LinkedList<>());
+                crawlerTask.setVisitedUrls(new ArrayList<>());
             crawlerTask.getVisitedUrls().addAll(this.urls);
             crawlerTaskRepository.save(crawlerTask);
             this.urls.clear();

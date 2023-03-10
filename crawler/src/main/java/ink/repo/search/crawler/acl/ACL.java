@@ -1,17 +1,17 @@
 package ink.repo.search.crawler.acl;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
 public class ACL {
-    private LinkedList<Pattern> rules;
+    private List<Pattern> rules;
 
     public ACL() {
-        this.rules = new LinkedList<>();
+        this.rules = new ArrayList<>();
     }
 
-    public ACL(LinkedList<Pattern> rules) {
+    public ACL(List<Pattern> rules) {
         this.rules = rules;
     }
 
