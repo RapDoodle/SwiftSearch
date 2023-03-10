@@ -22,11 +22,4 @@ public class WebPageResponse {
     private List<String> links;
     private Map<String, String> headers;
     private Map<String, List<String>> parentPointers;
-
-    public void setParentPointers(Map<String, Set<String>> parentPointers) {
-        this.parentPointers = new HashMap<>();
-        parentPointers.forEach((key, value) -> {
-            this.parentPointers.put(key, value.stream().toList());
-        });
-    }
 }
