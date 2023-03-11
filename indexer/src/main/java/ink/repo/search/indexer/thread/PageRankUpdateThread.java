@@ -2,8 +2,6 @@ package ink.repo.search.indexer.thread;
 
 import ink.repo.search.indexer.model.IndexedWebPage;
 import ink.repo.search.indexer.repository.IndexedWebPageRepository;
-import org.apache.commons.math.linear.MatrixUtils;
-import org.apache.commons.math.linear.RealMatrix;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
@@ -82,31 +80,26 @@ public class PageRankUpdateThread implements Runnable {
     }
 
     void iterate(double[] curr, double[] prev) {
+        final int n = curr.length;
+        assert n == prev.length;
         this.pages.stream().parallel().forEach((page) -> {
             int i = this.url2IdMapping.get(page.getUrl());
-            int n = this.linkCounts[i];
-            if (n == 0)
-                return;
-            double myPageRank = prev[i];
+            double currPageRank = prev[i];
             for (String link : page.getReferencedBy()) {
                 Integer j = url2IdMapping.get(link);
-                if (j == null)
+                if (j == null || this.linkCounts[j] == 0)
                     continue;
-                if (this.linkCounts[j] == 0)
-                    continue;
-                myPageRank += (prev[j] / this.linkCounts[j]);
+                currPageRank += (prev[j] / this.linkCounts[j]);
             }
-            curr[i] = 0.15 + 0.85 * myPageRank;
+            curr[i] = 0.15 + 0.85 * currPageRank;
         });
 
         // Normalize
         double sum = 0;
-        for (int i = 0; i < curr.length; ++i) {
-            sum += curr[i];
-        }
-        for (int i = 0; i < curr.length; ++i) {
-            curr[i] = (curr[i] / sum) * curr.length;
-        }
+        for (double val : curr)
+            sum += val;
+        for (int i = 0; i < n; ++i)
+            curr[i] = (curr[i] / sum) * n;
     }
 
     boolean isConverged(double[] arr1, double[] arr2) {
