@@ -1,6 +1,5 @@
 package ink.repo.search.indexer.service;
 
-import ink.repo.search.indexer.thread.IDFUpdateThread;
 import ink.repo.search.indexer.thread.PageRankUpdateThread;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

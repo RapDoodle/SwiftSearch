@@ -13,4 +13,5 @@ public class IndexerTaskRequest {
     private String crawlerServerAddr;
     private String crawlerServerProtocol;
     private String crawlerTaskId;
+    private Boolean forceUpdate;
 }

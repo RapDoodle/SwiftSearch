@@ -1,6 +1,6 @@
 package ink.repo.search.indexer.thread;
 
-import ink.repo.search.indexer.model.InvertedIndexEntry;
+import ink.repo.search.common.model.InvertedIndexEntry;
 import ink.repo.search.indexer.repository.InvertedIndexEntryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;

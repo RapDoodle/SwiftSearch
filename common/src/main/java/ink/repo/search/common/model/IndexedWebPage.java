@@ -1,4 +1,4 @@
-package ink.repo.search.indexer.model;
+package ink.repo.search.common.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -33,4 +33,5 @@ public class IndexedWebPage {
     private List<String> referencedBy;
     private List<String> referencesTo;
     private Double pageRank;
+    private Integer stemmedWordCount;
 }

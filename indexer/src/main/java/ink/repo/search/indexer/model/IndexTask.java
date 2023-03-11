@@ -29,4 +29,5 @@ public class IndexTask {
     private int completedUrls;
     private int totalUrls;
     private long duration;
+    private Boolean forceUpdate;
 }

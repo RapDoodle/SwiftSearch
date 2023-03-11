@@ -1,7 +1,7 @@
 package ink.repo.search.indexer.thread;
 
-import ink.repo.search.indexer.model.IndexedWebPage;
-import ink.repo.search.indexer.repository.IndexedWebPageRepository;
+import ink.repo.search.common.model.IndexedWebPage;
+import ink.repo.search.common.repository.IndexedWebPageRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
@@ -74,9 +74,6 @@ public class PageRankUpdateThread implements Runnable {
             this.pages.get(i).setPageRank(pageRanks[i]);
         }
         indexedWebPageRepository.saveAll(this.pages);
-
-        System.out.println("iter = " + iter);
-        System.out.println("Completed in " + (System.currentTimeMillis() - startTime) + " ms");
     }
 
     void iterate(double[] curr, double[] prev) {

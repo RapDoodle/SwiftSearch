@@ -1,11 +1,14 @@
 package ink.repo.search.common.util;
 
+import com.sun.jdi.event.StepEvent;
+import ink.repo.search.common.model.StemmedText;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.springframework.util.ResourceUtils;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -13,13 +16,13 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class TextPreprocessing {
-    private static final String STOP_WORDS_PATH = "assets/stopwords.txt";
+    private static final String STOP_WORDS_PATH = "/assets/stopwords.txt";
     private static final Set<String> stopWords = new HashSet<>();
 
     static {
         try {
             BufferedReader reader = new BufferedReader(
-                    new FileReader(ResourceUtils.getFile("classpath:" + STOP_WORDS_PATH)));
+                    new InputStreamReader(TextPreprocessing.class.getResourceAsStream(STOP_WORDS_PATH)));
             String word = reader.readLine();
             while (word != null) {
                 stopWords.add(word.toLowerCase());
@@ -31,11 +34,12 @@ public class TextPreprocessing {
         }
     }
 
-    public static ImmutablePair<String, Map<String, Integer>> preprocessTextAndCount(String text) {
+    public static StemmedText preprocessTextAndCount(String text) {
         Stemmer stemmer = new Stemmer();
         Map<String, Integer> wordFrequencies = new HashMap<>();
         StringBuilder stemmedTextSb = new StringBuilder();
         AtomicInteger lineCount = new AtomicInteger();
+        AtomicInteger stemmedWordCount = new AtomicInteger();
         text.lines().forEach(line -> {
             lineCount.incrementAndGet();
             String[] words = line.split(" ");
@@ -52,6 +56,7 @@ public class TextPreprocessing {
                 // Get word stem
                 word = stemmer.stem(word);
                 // Word count
+                stemmedWordCount.getAndIncrement();
                 wordFrequencies.put(word, wordFrequencies.getOrDefault(word, 0) + 1);
                 // Output
                 stemmedTextSb.append(word);
@@ -65,6 +70,11 @@ public class TextPreprocessing {
         // Should not be a new line for a document with an empty line
         if (lineCount.get() == 1)
             stemmedTextSb.deleteCharAt(stemmedTextSb.length() - 1);
-        return new ImmutablePair<>(stemmedTextSb.toString(), wordFrequencies);
+
+        StemmedText stemmedText = new StemmedText();
+        stemmedText.setStemmedText(stemmedTextSb.toString());
+        stemmedText.setWordFrequencies(wordFrequencies);
+        stemmedText.setStemmedWordCount(stemmedWordCount.get());
+        return stemmedText;
     }
 }

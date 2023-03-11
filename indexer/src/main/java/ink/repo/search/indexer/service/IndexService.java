@@ -31,6 +31,7 @@ public class IndexService {
         indexTask.setCrawlerServerProtocol(indexTaskRequest.getCrawlerServerProtocol());
         indexTask.setCrawlerServerAddr(indexTaskRequest.getCrawlerServerAddr());
         indexTask.setCrawlerTaskId(indexTaskRequest.getCrawlerTaskId());
+        indexTask.setForceUpdate(indexTaskRequest.getForceUpdate());
         indexTaskRepository.save(indexTask);
 
         BuildIndexThread buildIndexThread = applicationContext.getBean(BuildIndexThread.class);

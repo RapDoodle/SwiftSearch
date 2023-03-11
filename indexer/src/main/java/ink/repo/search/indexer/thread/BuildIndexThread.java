@@ -4,11 +4,12 @@ import ink.repo.search.common.dto.CrawlerTaskResponse;
 import ink.repo.search.common.dto.WebPageResponse;
 import ink.repo.search.common.exception.AttributeAlreadyDefinedException;
 import ink.repo.search.common.exception.NotFoundException;
+import ink.repo.search.common.model.IndexedWebPage;
+import ink.repo.search.common.model.InvertedIndexEntry;
+import ink.repo.search.common.model.StemmedText;
 import ink.repo.search.common.util.HTMLUtils;
 import ink.repo.search.common.util.TextPreprocessing;
 import ink.repo.search.indexer.model.IndexTask;
-import ink.repo.search.indexer.model.IndexedWebPage;
-import ink.repo.search.indexer.model.InvertedIndexEntry;
 import ink.repo.search.indexer.repository.IndexTaskRepository;
 import ink.repo.search.indexer.repository.IndexedWebPageRepository;
 import ink.repo.search.indexer.repository.InvertedIndexEntryRepository;
@@ -55,6 +56,7 @@ public class BuildIndexThread implements Runnable {
         if (indexTaskOpt.isEmpty())
             return;
         IndexTask indexTask = indexTaskOpt.get();
+        final boolean forceUpdate = indexTask.getForceUpdate() == null ? false : indexTask.getForceUpdate();
 
         try {
             // Server address
@@ -94,7 +96,8 @@ public class BuildIndexThread implements Runnable {
                     indexedWebPage = indexedWebPageOpt.get();
                     // Check if update is needed
                     // No actions needed when lastFetchedDate (of the indexer) >= lastFetchedDate (of the crawler)
-                    if (indexedWebPage.getLastFetchedDate() != null &&
+                    if (!forceUpdate &&
+                            indexedWebPage.getLastFetchedDate() != null &&
                             webPageResponse.getLastFetchedDate() != null &&
                             indexedWebPage.getLastFetchedDate().compareTo(webPageResponse.getLastFetchedDate()) >= 0) {
                         return;
@@ -109,9 +112,8 @@ public class BuildIndexThread implements Runnable {
                 String plainTextPage = parsedHTML.body().text();
 
                 // Remove stop words and count word frequencies
-                ImmutablePair<String, Map<String, Integer>> immPair = TextPreprocessing.preprocessTextAndCount(plainTextPage);
-                String stemmedText = immPair.left;
-                Map<String, Integer> wordFrequencies = immPair.right;
+                StemmedText stemmedTextObj = TextPreprocessing.preprocessTextAndCount(plainTextPage);
+                String stemmedText = stemmedTextObj.getStemmedText();
 
                 indexedWebPage.setTitle(webPageResponse.getTitle());
                 indexedWebPage.setUrl(webPageResponse.getUrl());
@@ -123,7 +125,8 @@ public class BuildIndexThread implements Runnable {
                 indexedWebPage.setReferencedBy(crawlerTaskResponse.getParentPointers().getOrDefault(webPageResponse.getId(), new ArrayList<>()));
                 indexedWebPage.setPlainText(plainTextPage);
                 indexedWebPage.setStemmedText(stemmedText);
-                indexedWebPage.setWordFrequencies(wordFrequencies);
+                indexedWebPage.setWordFrequencies(stemmedTextObj.getWordFrequencies());
+                indexedWebPage.setStemmedWordCount(stemmedTextObj.getStemmedWordCount());
 
                 indexedWebPageRepository.save(indexedWebPage);
 
