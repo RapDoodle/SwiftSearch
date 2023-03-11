@@ -1,4 +1,4 @@
-package ink.repo.search.indexer.exception;
+package ink.repo.search.common.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;

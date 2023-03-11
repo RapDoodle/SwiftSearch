@@ -1,9 +1,9 @@
-package ink.repo.search.crawler.util;
+package ink.repo.search.common.util;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
-public class HTMLParser {
+public class HTMLUtils {
 
     public static Document parseHTML(String html) {
         return Jsoup.parse(html.toString());

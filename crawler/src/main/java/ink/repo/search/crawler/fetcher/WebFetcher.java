@@ -1,7 +1,7 @@
 package ink.repo.search.crawler.fetcher;
 
+import ink.repo.search.common.util.HTMLUtils;
 import ink.repo.search.crawler.model.FetcherResponse;
-import ink.repo.search.crawler.util.HTMLParser;
 import org.jsoup.nodes.Document;
 
 import java.io.BufferedReader;
@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLConnection;
 import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.*;
@@ -50,7 +49,7 @@ public class WebFetcher implements Fetcher {
         in.close();
 
         // Response
-        Document parsedHTML = HTMLParser.parseHTML(html.toString(), url);
+        Document parsedHTML = HTMLUtils.parseHTML(html.toString(), url);
         FetcherResponse fetcherResponse = new FetcherResponse();
         fetcherResponse.setUrl(url);
         fetcherResponse.setContent(parsedHTML);

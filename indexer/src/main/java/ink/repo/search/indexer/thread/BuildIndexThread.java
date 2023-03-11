@@ -1,17 +1,17 @@
 package ink.repo.search.indexer.thread;
 
-import ink.repo.search.indexer.dto.CrawlerTaskResponse;
-import ink.repo.search.indexer.dto.WebPageResponse;
-import ink.repo.search.indexer.exception.AttributeAlreadyDefinedException;
-import ink.repo.search.indexer.exception.NotFoundException;
+import ink.repo.search.common.dto.CrawlerTaskResponse;
+import ink.repo.search.common.dto.WebPageResponse;
+import ink.repo.search.common.exception.AttributeAlreadyDefinedException;
+import ink.repo.search.common.exception.NotFoundException;
+import ink.repo.search.common.util.HTMLUtils;
+import ink.repo.search.common.util.TextPreprocessing;
 import ink.repo.search.indexer.model.IndexTask;
 import ink.repo.search.indexer.model.IndexedWebPage;
 import ink.repo.search.indexer.model.InvertedIndexEntry;
 import ink.repo.search.indexer.repository.IndexTaskRepository;
 import ink.repo.search.indexer.repository.IndexedWebPageRepository;
 import ink.repo.search.indexer.repository.InvertedIndexEntryRepository;
-import ink.repo.search.indexer.utils.HTMLParser;
-import ink.repo.search.indexer.utils.Preprocessing;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.jsoup.nodes.Document;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -105,11 +105,11 @@ public class BuildIndexThread implements Runnable {
                 }
 
                 // Get the plain text HTML
-                Document parsedHTML = HTMLParser.parseHTML(webPageResponse.getContent(), webPageResponse.getUrl());
+                Document parsedHTML = HTMLUtils.parseHTML(webPageResponse.getContent(), webPageResponse.getUrl());
                 String plainTextPage = parsedHTML.body().text();
 
                 // Remove stop words and count word frequencies
-                ImmutablePair<String, Map<String, Integer>> immPair = Preprocessing.preprocessTextAndCount(plainTextPage);
+                ImmutablePair<String, Map<String, Integer>> immPair = TextPreprocessing.preprocessTextAndCount(plainTextPage);
                 String stemmedText = immPair.left;
                 Map<String, Integer> wordFrequencies = immPair.right;
 

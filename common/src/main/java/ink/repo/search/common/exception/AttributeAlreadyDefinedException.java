@@ -1,4 +1,4 @@
-package ink.repo.search.indexer.exception;
+package ink.repo.search.common.exception;
 
 public class AttributeAlreadyDefinedException extends Exception {
     public AttributeAlreadyDefinedException() {

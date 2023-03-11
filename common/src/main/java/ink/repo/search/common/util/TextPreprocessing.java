@@ -1,4 +1,4 @@
-package ink.repo.search.indexer.utils;
+package ink.repo.search.common.util;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.springframework.util.ResourceUtils;
@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class Preprocessing {
+public class TextPreprocessing {
     private static final String STOP_WORDS_PATH = "assets/stopwords.txt";
     private static final Set<String> stopWords = new HashSet<>();
 

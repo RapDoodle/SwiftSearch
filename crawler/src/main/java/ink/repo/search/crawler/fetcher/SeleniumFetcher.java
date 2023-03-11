@@ -1,7 +1,7 @@
 package ink.repo.search.crawler.fetcher;
 
+import ink.repo.search.common.util.HTMLUtils;
 import ink.repo.search.crawler.model.FetcherResponse;
-import ink.repo.search.crawler.util.HTMLParser;
 import io.github.bonigarcia.wdm.WebDriverManager;
 import org.jsoup.nodes.Document;
 import org.openqa.selenium.TimeoutException;
@@ -94,7 +94,7 @@ public class SeleniumFetcher implements Fetcher {
         }
 
         // Response
-        Document parsedHTML = HTMLParser.parseHTML(content, url);
+        Document parsedHTML = HTMLUtils.parseHTML(content, url);
         FetcherResponse fetcherResponse = new FetcherResponse();
         fetcherResponse.setUrl(url);
         fetcherResponse.setContent(parsedHTML);

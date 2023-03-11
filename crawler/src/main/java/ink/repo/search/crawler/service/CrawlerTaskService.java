@@ -1,7 +1,7 @@
 package ink.repo.search.crawler.service;
 
-import ink.repo.search.crawler.dto.CrawlerTaskRequest;
-import ink.repo.search.crawler.dto.CrawlerTaskResponse;
+import ink.repo.search.common.dto.CrawlerTaskRequest;
+import ink.repo.search.common.dto.CrawlerTaskResponse;
 import ink.repo.search.crawler.exception.AlreadyStoppedException;
 import ink.repo.search.crawler.exception.ArgumentNotFoundException;
 import ink.repo.search.crawler.exception.AttributeAlreadyDefinedException;

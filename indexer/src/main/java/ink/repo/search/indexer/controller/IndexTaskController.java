@@ -1,8 +1,8 @@
 package ink.repo.search.indexer.controller;
 
+import ink.repo.search.common.exception.AttributeAlreadyDefinedException;
+import ink.repo.search.common.exception.NotFoundException;
 import ink.repo.search.indexer.dto.IndexerTaskRequest;
-import ink.repo.search.indexer.exception.AttributeAlreadyDefinedException;
-import ink.repo.search.indexer.exception.NotFoundException;
 import ink.repo.search.indexer.service.IndexService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;

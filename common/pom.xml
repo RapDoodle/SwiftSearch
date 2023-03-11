@@ -9,22 +9,14 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>ink.repo.search</groupId>
-	<artifactId>indexer</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
-	<name>indexer</name>
-	<description>The index engine for PopSearch</description>
+	<artifactId>common</artifactId>
+	<version>0.2-beta</version>
+	<name>search-lib</name>
+	<description>Shared libraries for PopSearch modules.</description>
 	<properties>
 		<java.version>17</java.version>
 	</properties>
 	<dependencies>
-		<!-- Core -->
-		<dependency>
-			<groupId>ink.repo.search</groupId>
-			<artifactId>common</artifactId>
-			<version>0.2-beta</version>
-		</dependency>
-
-		<!-- Spring Boot Generated -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-mongodb</artifactId>
@@ -66,23 +58,28 @@
 			<artifactId>stanford-corenlp</artifactId>
 			<version>4.5.2</version>
 		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
+			<version>3.12.0</version>
+		</dependency>
 	</dependencies>
 
-	<build>
-		<plugins>
-			<plugin>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-maven-plugin</artifactId>
-				<configuration>
-					<excludes>
-						<exclude>
-							<groupId>org.projectlombok</groupId>
-							<artifactId>lombok</artifactId>
-						</exclude>
-					</excludes>
-				</configuration>
-			</plugin>
-		</plugins>
-	</build>
+<!--	<build>-->
+<!--		<plugins>-->
+<!--			<plugin>-->
+<!--				<groupId>org.springframework.boot</groupId>-->
+<!--				<artifactId>spring-boot-maven-plugin</artifactId>-->
+<!--				<configuration>-->
+<!--					<excludes>-->
+<!--						<exclude>-->
+<!--							<groupId>org.projectlombok</groupId>-->
+<!--							<artifactId>lombok</artifactId>-->
+<!--						</exclude>-->
+<!--					</excludes>-->
+<!--				</configuration>-->
+<!--			</plugin>-->
+<!--		</plugins>-->
+<!--	</build>-->
 
 </project>

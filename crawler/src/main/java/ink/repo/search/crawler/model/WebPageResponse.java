@@ -1,4 +1,4 @@
-package ink.repo.search.crawler.dto;
+package ink.repo.search.crawler.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

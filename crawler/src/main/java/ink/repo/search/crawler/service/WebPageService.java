@@ -1,10 +1,10 @@
 package ink.repo.search.crawler.service;
 
-import ink.repo.search.crawler.dto.WebPageRequest;
-import ink.repo.search.crawler.dto.WebPageResponse;
+import ink.repo.search.common.dto.WebPageRequest;
 import ink.repo.search.crawler.exception.ArgumentNotFoundException;
 import ink.repo.search.crawler.exception.NotFoundException;
 import ink.repo.search.crawler.model.WebPage;
+import ink.repo.search.crawler.model.WebPageResponse;
 import ink.repo.search.crawler.repository.WebPageRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

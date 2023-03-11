@@ -1,14 +1,8 @@
-package ink.repo.search.indexer.utils;
-
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.Iterator;
-
-import java.util.function.Function;
-
+package ink.repo.search.common.util;
 
 import edu.stanford.nlp.ling.Word;
+
+import java.util.function.Function;
 
 /**
  * Stemmer, implementing the Porter Stemming Algorithm
