@@ -46,7 +46,8 @@ public class CrawlerTaskService {
         if (crawlerTask.getVisitedUrls() != null)
             crawlerTaskResponse.setVisitedCount(crawlerTask.getVisitedUrls().size());
         crawlerTaskResponse.setCreatedAt(crawlerTask.getCreatedAt());
-        crawlerTaskResponse.setParentPointers(crawlerTask.getParentPointers());
+        if (crawlerTask.getParentPointers() != null)
+            crawlerTaskResponse.setParentPointers(crawlerTask.getParentPointers());
 
         return crawlerTaskResponse;
     }
@@ -57,6 +58,9 @@ public class CrawlerTaskService {
         crawlerTask.setAcl(crawlerTaskRequest.getAcl());
         crawlerTask.setMaxDepth(crawlerTaskRequest.getMaxDepth());
         crawlerTask.setMaxVisits(crawlerTaskRequest.getMaxVisits());
+        crawlerTask.setFetcher(crawlerTaskRequest.getFetcher());
+        if (crawlerTask.getFetcher() == null)
+            crawlerTask.setFetcher("default");  // Use default fetcher
         crawlerTaskRepository.save(crawlerTask);
 
         CrawlerThread crawlerThread = applicationContext.getBean(CrawlerThread.class);
@@ -69,6 +73,7 @@ public class CrawlerTaskService {
         crawlerTaskResponse.setBaseUrl(crawlerTask.getBaseUrl());
         crawlerTaskResponse.setTaskStatus(crawlerTask.getTaskStatus());
         crawlerTaskResponse.setCreatedAt(crawlerTask.getCreatedAt());
+        crawlerTaskResponse.setFetcher(crawlerTask.getFetcher());
 
         return crawlerTaskResponse;
     }

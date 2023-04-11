@@ -2,6 +2,7 @@ package ink.repo.search.crawler.thread;
 
 import ink.repo.search.crawler.acl.ACL;
 import ink.repo.search.crawler.exception.AttributeAlreadyDefinedException;
+import ink.repo.search.crawler.exception.UnknownFetcherException;
 import ink.repo.search.crawler.fetcher.Fetcher;
 import ink.repo.search.crawler.fetcher.SeleniumFetcher;
 import ink.repo.search.crawler.fetcher.WebFetcher;
@@ -73,121 +74,137 @@ public class CrawlerThread implements Runnable {
         String baseUrl = crawlerTask.getBaseUrl();
         queue.add(baseUrl);
         int level = 0, visitCount = 0;
-        // Fetcher fetcher = new SeleniumFetcher(5, false);
-        Fetcher fetcher = new WebFetcher();
-        while (!queue.isEmpty() && maxDepth-- > 0) {
-            int levelSize = queue.size();
-            while (levelSize-- > 0 && maxVisits-- > 0) {
-                // Check whether the task is terminated
-                if (visitCount % CHECK_STOPPED_INTERVAL == 0 && checkIsStopped()) {
-                    flushTaskCache();
-                    return;
-                }
 
-                // Visit the current url
-                String currUrl = queue.poll();
-                currUrl = currUrl.split("#")[0];
-                if (visitedUrls.contains(currUrl))
-                    continue;
-                urls.add(currUrl);
-                ++visitCount;
-                System.out.println("[" + level + "][" + visitCount + "] Visiting " + currUrl);
-                try {
-                    FetcherResponse fetcherResponse = fetcher.fetch(currUrl);
-                    Map<String, String> headers = fetcherResponse.getHeaders();
-                    Document html = fetcherResponse.getContent();
-
-                    // DB object
-                    Optional<WebPage> dbFetchRes = webPageRepository.findByUrl(currUrl);
-                    WebPage webPage = null;
-                    if (dbFetchRes.isEmpty())
-                        webPage = new WebPage();
-                    else
-                        webPage = dbFetchRes.get();
-
-                    // Skip if the web page has not been modified
-                    boolean fetch = true;
-                    Date lastModifiedDate = null;
-                    if (headers.getOrDefault("Last-Modified", null) != null) {
-                        SimpleDateFormat formatter = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z");
-                        lastModifiedDate = formatter.parse(headers.get("Last-Modified"));
-                        if (webPage.getResponseStatusCode() != null &&
-                                webPage.getResponseStatusCode() >= 200 &&
-                                webPage.getResponseStatusCode() <= 299 &&
-                                webPage.getLastFetchedDate() != null &&
-                                lastModifiedDate.compareTo(webPage.getLastFetchedDate()) < 0) {
-                            System.out.println("Already fetched " + currUrl);
-                            fetch = false;
-                        }
-                    }
-
-                    Elements links = html.getElementsByTag("a");
-                    System.out.println("Found " + links.size() + " links.");
-                    visitedUrls.add(currUrl);
-
-                    // The list of links the currUrl references to
-                    ArrayList<String> currUrlLinks = new ArrayList<>();
-                    for (Element link : links) {
-                        String linkUrl;
-                        try {
-                            linkUrl = new URL(link.absUrl("href")).toURI().toString();
-                        } catch (URISyntaxException | MalformedURLException e) {
-                            continue;
-                        }
-                        currUrlLinks.add(linkUrl);
-
-                        // Parent references
-                        String linkUrlObjectId = urlToObjectIdMapping.getOrDefault(linkUrl, null);
-                        if (linkUrlObjectId == null) {
-                            if (this.urlToParentUrlsMapping.getOrDefault(linkUrl, null) == null)
-                                this.urlToParentUrlsMapping.put(linkUrl, new HashSet<>());
-                            this.urlToParentUrlsMapping.get(linkUrl).add(currUrl);
-                        } else {
-                            this.objectIdToParentUrlsMapping.get(linkUrlObjectId).add(currUrl);
-                        }
-
-                        // Access policy
-                        if (acl.check(linkUrl) && !visitedUrls.contains(linkUrl))
-                            queue.add(linkUrl);
-                    }
-
-                    if (fetch) {
-                        // Save contents
-                        webPage.setUrl(currUrl);
-                        webPage.setTitle(fetcherResponse.getTitle());
-                        webPage.setContent(html.html());
-                        webPage.setHeaders(headers);
-                        webPage.setResponseStatusCode(fetcherResponse.getResponseStatusCode());
-                        if (webPage.getCreatedDate() == null)
-                            webPage.setCreatedDate(new Date());
-                        webPage.setLastModifiedDate(lastModifiedDate);
-                        webPage.setLinks(currUrlLinks);
-                    }
-                    webPage.setLastFetchedDate(new Date());
-                    webPageRepository.save(webPage);
-
-                    if (!urlToObjectIdMapping.containsKey(currUrl)) {
-                        // Migrate everything in urlToParentUrlsMapping to objectIdToParentUrlsMapping
-                        this.objectIdToParentUrlsMapping.put(webPage.getId(), urlToParentUrlsMapping.getOrDefault(currUrl, new HashSet<>()));
-                        this.urlToObjectIdMapping.put(webPage.getId(), currUrl);
-                    }
-                } catch (IOException | InterruptedException e) {
-                    e.printStackTrace();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-
-                // Flush urls to database
-                if (visitCount % CHECKPOINT_INTERVAL == 0)
-                    flushTaskCache();
+        try {
+            // Set fetcher type
+            Fetcher fetcher = null;
+            if (crawlerTask.getFetcher().equals("default")) {
+                fetcher = new WebFetcher();
+            } else if (crawlerTask.getFetcher().equals("selenium")) {
+                fetcher = new SeleniumFetcher(5, true);
+            } else {
+                throw new UnknownFetcherException(crawlerTask.getFetcher());
             }
-            ++level;
-        }
-        crawlerTask = flushTaskCache();
-        crawlerTask.setTaskStatus(CrawlerTask.TASK_FINISHED);
-        crawlerTaskRepository.save(crawlerTask);
 
-        fetcher.close();
+            // Fetch web pages recursively
+            while (!queue.isEmpty() && maxDepth-- > 0) {
+                int levelSize = queue.size();
+                while (levelSize-- > 0 && maxVisits-- > 0) {
+                    // Check whether the task is terminated
+                    if (visitCount % CHECK_STOPPED_INTERVAL == 0 && checkIsStopped()) {
+                        flushTaskCache();
+                        return;
+                    }
+
+                    // Visit the current url
+                    String currUrl = queue.poll();
+                    currUrl = currUrl.split("#")[0];
+                    if (visitedUrls.contains(currUrl))
+                        continue;
+                    urls.add(currUrl);
+                    ++visitCount;
+                    System.out.println("[" + level + "][" + visitCount + "] Visiting " + currUrl);
+                    try {
+                        FetcherResponse fetcherResponse = fetcher.fetch(currUrl);
+                        Map<String, String> headers = fetcherResponse.getHeaders();
+                        Document html = fetcherResponse.getContent();
+
+                        // DB object
+                        Optional<WebPage> dbFetchRes = webPageRepository.findByUrl(currUrl);
+                        WebPage webPage = null;
+                        if (dbFetchRes.isEmpty())
+                            webPage = new WebPage();
+                        else
+                            webPage = dbFetchRes.get();
+
+                        // Skip if the web page has not been modified
+                        boolean fetch = true;
+                        Date lastModifiedDate = null;
+                        if (headers.getOrDefault("Last-Modified", null) != null) {
+                            SimpleDateFormat formatter = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z");
+                            lastModifiedDate = formatter.parse(headers.get("Last-Modified"));
+                            if (webPage.getResponseStatusCode() != null &&
+                                    webPage.getResponseStatusCode() >= 200 &&
+                                    webPage.getResponseStatusCode() <= 299 &&
+                                    webPage.getLastFetchedDate() != null &&
+                                    lastModifiedDate.compareTo(webPage.getLastFetchedDate()) < 0) {
+                                System.out.println("Already fetched " + currUrl);
+                                fetch = false;
+                            }
+                        }
+
+                        Elements links = html.getElementsByTag("a");
+                        System.out.println("Found " + links.size() + " links.");
+                        visitedUrls.add(currUrl);
+
+                        // The list of links the currUrl references to
+                        ArrayList<String> currUrlLinks = new ArrayList<>();
+                        for (Element link : links) {
+                            String linkUrl;
+                            try {
+                                linkUrl = new URL(link.absUrl("href")).toURI().toString();
+                            } catch (URISyntaxException | MalformedURLException e) {
+                                continue;
+                            }
+                            currUrlLinks.add(linkUrl);
+
+                            // Parent references
+                            String linkUrlObjectId = urlToObjectIdMapping.getOrDefault(linkUrl, null);
+                            if (linkUrlObjectId == null) {
+                                if (this.urlToParentUrlsMapping.getOrDefault(linkUrl, null) == null)
+                                    this.urlToParentUrlsMapping.put(linkUrl, new HashSet<>());
+                                this.urlToParentUrlsMapping.get(linkUrl).add(currUrl);
+                            } else {
+                                this.objectIdToParentUrlsMapping.get(linkUrlObjectId).add(currUrl);
+                            }
+
+                            // Access policy
+                            if (acl.check(linkUrl) && !visitedUrls.contains(linkUrl))
+                                queue.add(linkUrl);
+                        }
+
+                        if (fetch) {
+                            // Save contents
+                            webPage.setUrl(currUrl);
+                            webPage.setTitle(fetcherResponse.getTitle());
+                            webPage.setContent(html.html());
+                            webPage.setHeaders(headers);
+                            webPage.setResponseStatusCode(fetcherResponse.getResponseStatusCode());
+                            if (webPage.getCreatedDate() == null)
+                                webPage.setCreatedDate(new Date());
+                            webPage.setLastModifiedDate(lastModifiedDate);
+                            webPage.setLinks(currUrlLinks);
+                        }
+                        webPage.setLastFetchedDate(new Date());
+                        webPageRepository.save(webPage);
+
+                        if (!urlToObjectIdMapping.containsKey(currUrl)) {
+                            // Migrate everything in urlToParentUrlsMapping to objectIdToParentUrlsMapping
+                            this.objectIdToParentUrlsMapping.put(webPage.getId(), urlToParentUrlsMapping.getOrDefault(currUrl, new HashSet<>()));
+                            this.urlToObjectIdMapping.put(webPage.getId(), currUrl);
+                        }
+                    } catch (IOException | InterruptedException e) {
+                        e.printStackTrace();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+
+                    // Flush urls to database
+                    if (visitCount % CHECKPOINT_INTERVAL == 0)
+                        flushTaskCache();
+                }
+                ++level;
+            }
+            crawlerTask = flushTaskCache();
+            crawlerTask.setTaskStatus(CrawlerTask.TASK_FINISHED);
+            crawlerTaskRepository.save(crawlerTask);
+
+            fetcher.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+            crawlerTask.setTaskStatus(CrawlerTask.TASK_ERROR);
+            crawlerTaskRepository.save(crawlerTask);
+        }
     }
 
     private boolean checkIsStopped() {

@@ -31,10 +31,9 @@ public class WebFetcher implements Fetcher {
         // Get headers
         Map<String, String> headers = new HashMap<>();
         Set<String> headerKeys = connection.getHeaderFields().keySet();
-        for (String headerKey : headerKeys) {
+        for (String headerKey : headerKeys)
             if (headerKey != null)
-            headers.put(headerKey, connection.getHeaderField(headerKey));
-        }
+                headers.put(headerKey, connection.getHeaderField(headerKey));
 
         // Read page content from buffer
         BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));

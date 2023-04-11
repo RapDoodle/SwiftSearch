@@ -23,6 +23,7 @@ public class CrawlerTask {
     public static final int TASK_RUNNING = 1;
     public static final int TASK_FINISHED = 2;
     public static final int TASK_STOPPED = 3;
+    public static final int TASK_ERROR = 4;
 
     @Id
     private String id;
@@ -35,4 +36,5 @@ public class CrawlerTask {
     private Integer maxVisits;
     private List<String> visitedUrls;
     private Map<String, Set<String>> parentPointers;
+    private String fetcher;
 }
