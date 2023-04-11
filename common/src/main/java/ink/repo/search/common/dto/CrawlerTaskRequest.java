@@ -15,4 +15,5 @@ public class CrawlerTaskRequest {
     private Integer maxDepth;
     private Integer maxVisits;
     private List<String> acl;
+    private String fetcher;
 }

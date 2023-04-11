@@ -23,6 +23,7 @@ public class CrawlerTaskResponse {
     private Integer visitedCount;
     private List<String> visitedUrls;
     private Map<String, List<String>> parentPointers;
+    private String fetcher;
 
     public void setParentPointers(Map<String, Set<String>> parentPointers) {
         this.parentPointers = new HashMap<>();
