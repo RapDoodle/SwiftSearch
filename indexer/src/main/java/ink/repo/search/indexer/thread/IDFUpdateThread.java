@@ -1,6 +1,8 @@
 package ink.repo.search.indexer.thread;
 
+import ink.repo.search.common.model.TitleInvertedIndexEntry;
 import ink.repo.search.common.model.WebPageInvertedIndexEntry;
+import ink.repo.search.indexer.repository.TitleInvertedIndexEntryRepository;
 import ink.repo.search.indexer.repository.WebPageInvertedIndexEntryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
@@ -12,22 +14,32 @@ import java.util.List;
 @Scope("prototype")
 public class IDFUpdateThread implements Runnable {
     @Autowired
-    private WebPageInvertedIndexEntryRepository invertedIndexEntryRepository;
+    private WebPageInvertedIndexEntryRepository webPageInvertedIndexEntryRepository;
+    @Autowired
+    private TitleInvertedIndexEntryRepository titleInvertedIndexEntryRepository;
 
     @Override
     public void run() {
+        System.out.println("Updating IDF...");
         // Timer
         long startTime = System.currentTimeMillis();
 
-        // Fetch all entries
-        List<WebPageInvertedIndexEntry> entries = invertedIndexEntryRepository.findAll();
-        int n = entries.size();
-
         // Update IDF for each entry with idf = log2(N/df)
-        entries.stream().parallel().forEach((entry) -> {
-            entry.setIdf(Math.log((double) n / entry.getWebPages().size()) / Math.log(2));
+        // For body
+        List<WebPageInvertedIndexEntry> webPageInvertedIndexEntries = webPageInvertedIndexEntryRepository.findAll();
+        final int webPageIndexSize = webPageInvertedIndexEntries.size();
+        webPageInvertedIndexEntries.stream().parallel().forEach((entry) -> {
+            entry.setIdf(Math.log((double) webPageIndexSize / entry.getWebPages().size()) / Math.log(2));
         });
-        System.out.println("Completed in " + (System.currentTimeMillis() - startTime) + " ms");
-        invertedIndexEntryRepository.saveAll(entries);
+        webPageInvertedIndexEntryRepository.saveAll(webPageInvertedIndexEntries);
+        // For title
+        List<TitleInvertedIndexEntry> titleInvertedIndexEntries = titleInvertedIndexEntryRepository.findAll();
+        final int titleIndexSize = titleInvertedIndexEntries.size();
+        titleInvertedIndexEntries.stream().parallel().forEach((entry) -> {
+            entry.setIdf(Math.log((double) titleIndexSize / entry.getWebPages().size()) / Math.log(2));
+        });
+        titleInvertedIndexEntryRepository.saveAll(titleInvertedIndexEntries);
+
+        System.out.println("IDF update completed in " + (System.currentTimeMillis() - startTime) + " ms");
     }
 }
