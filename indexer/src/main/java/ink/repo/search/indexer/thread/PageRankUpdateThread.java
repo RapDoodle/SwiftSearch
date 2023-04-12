@@ -22,6 +22,7 @@ public class PageRankUpdateThread implements Runnable {
 
     @Override
     public void run() {
+        System.out.println("Updating PageRank...");
         // Timer
         long startTime = System.currentTimeMillis();
 
@@ -74,6 +75,8 @@ public class PageRankUpdateThread implements Runnable {
             this.pages.get(i).setPageRank(pageRanks[i]);
         }
         indexedWebPageRepository.saveAll(this.pages);
+
+        System.out.println("Updated PageRank in " + (System.currentTimeMillis() - startTime) + " ms");
     }
 
     void iterate(double[] curr, double[] prev) {
