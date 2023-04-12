@@ -18,6 +18,9 @@ import java.util.Map;
 @Builder
 @Data
 public class IndexedWebPage {
+    public static final int BODY = 0;
+    public static final int TITLE = 1;
+
     @Id
     private String id;
     @Indexed
@@ -28,10 +31,60 @@ public class IndexedWebPage {
     private Date lastModifiedDate;
     private String html;
     private String plainText;
-    private String stemmedText;
-    private Map<String, Integer> wordFrequencies;
+    private String stemmedBody;
+    private String stemmedTitle;
+    private Map<String, Integer> bodyWordFrequencies;
+    private Map<String, Integer> titleWordFrequencies;
     private List<String> referencedBy;
     private List<String> referencesTo;
     private Double pageRank;
-    private Integer stemmedWordCount;
+    private Integer bodyStemmedWordCount;
+    private Integer titleStemmedWordCount;
+
+    public Map<String, Integer> getWordFrequencies(int type) {
+        return switch (type) {
+            case BODY -> this.bodyWordFrequencies;
+            case TITLE -> this.titleWordFrequencies;
+            default -> null;
+        };
+    }
+
+    public String getText(int type) {
+        return switch (type) {
+            case BODY -> this.plainText;
+            case TITLE -> this.title;
+            default -> null;
+        };
+    }
+
+    public String getStemmedText(int type) {
+        return switch (type) {
+            case BODY -> this.stemmedBody;
+            case TITLE -> this.stemmedTitle;
+            default -> null;
+        };
+    }
+
+    public Integer getStemmedWordCount(int type) {
+        return switch (type) {
+            case BODY -> this.bodyStemmedWordCount;
+            case TITLE -> this.titleStemmedWordCount;
+            default -> null;
+        };
+    }
+
+    @Override
+    public String toString() {
+        return "IndexedWebPage{" +
+                "id='" + id + '\'' +
+                ", url='" + url + '\'' +
+                ", title='" + title + '\'' +
+                ", createdDate=" + createdDate +
+                ", lastFetchedDate=" + lastFetchedDate +
+                ", lastModifiedDate=" + lastModifiedDate +
+                ", pageRank=" + pageRank +
+                ", bodyStemmedWordCount=" + bodyStemmedWordCount +
+                ", titleStemmedWordCount=" + titleStemmedWordCount +
+                '}';
+    }
 }

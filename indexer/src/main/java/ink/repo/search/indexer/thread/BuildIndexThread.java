@@ -5,15 +5,16 @@ import ink.repo.search.common.dto.WebPageResponse;
 import ink.repo.search.common.exception.AttributeAlreadyDefinedException;
 import ink.repo.search.common.exception.NotFoundException;
 import ink.repo.search.common.model.IndexedWebPage;
-import ink.repo.search.common.model.InvertedIndexEntry;
 import ink.repo.search.common.model.StemmedText;
+import ink.repo.search.common.model.TitleInvertedIndexEntry;
+import ink.repo.search.common.model.WebPageInvertedIndexEntry;
 import ink.repo.search.common.util.HTMLUtils;
 import ink.repo.search.common.util.TextPreprocessing;
 import ink.repo.search.indexer.model.IndexTask;
 import ink.repo.search.indexer.repository.IndexTaskRepository;
 import ink.repo.search.indexer.repository.IndexedWebPageRepository;
-import ink.repo.search.indexer.repository.InvertedIndexEntryRepository;
-import org.apache.commons.lang3.tuple.ImmutablePair;
+import ink.repo.search.indexer.repository.TitleInvertedIndexEntryRepository;
+import ink.repo.search.indexer.repository.WebPageInvertedIndexEntryRepository;
 import org.jsoup.nodes.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
@@ -36,7 +37,9 @@ public class BuildIndexThread implements Runnable {
     @Autowired
     private IndexedWebPageRepository indexedWebPageRepository;
     @Autowired
-    private InvertedIndexEntryRepository invertedIndexEntryRepository;
+    private WebPageInvertedIndexEntryRepository invertedIndexEntryRepository;
+    @Autowired
+    private TitleInvertedIndexEntryRepository titleInvertedIndexEntryRepository;
     private String taskId;
     private boolean isTerminated = false;
 
@@ -73,8 +76,9 @@ public class BuildIndexThread implements Runnable {
             if (crawlerTaskResponse == null)
                 return;
 
-            // Create inverted index
-            ConcurrentMap<String, InvertedIndexEntry> invertedIndexEntryMap = new ConcurrentHashMap<>();
+            // Create inverted index. Maps word to inverted index entries.
+            ConcurrentMap<String, WebPageInvertedIndexEntry> webPageInvertedIndexEntryMap = new ConcurrentHashMap<>();
+            ConcurrentMap<String, TitleInvertedIndexEntry> titleInvertedIndexEntryMap = new ConcurrentHashMap<>();
 
             // Process the crawled content of each url visited by the crawler
             List<String> visitedUrls = crawlerTaskResponse.getVisitedUrls();
@@ -112,8 +116,12 @@ public class BuildIndexThread implements Runnable {
                 String plainTextPage = parsedHTML.body().text();
 
                 // Remove stop words and count word frequencies
-                StemmedText stemmedTextObj = TextPreprocessing.preprocessTextAndCount(plainTextPage);
-                String stemmedText = stemmedTextObj.getStemmedText();
+                // For web content
+                StemmedText stemmedBodyObj = TextPreprocessing.preprocessTextAndCount(plainTextPage);
+                String stemmedBody = stemmedBodyObj.getStemmedText();
+                // For web title
+                StemmedText stemmedTitleObj = TextPreprocessing.preprocessTextAndCount(webPageResponse.getTitle());
+                String stemmedTitle = stemmedTitleObj.getStemmedText();
 
                 indexedWebPage.setTitle(webPageResponse.getTitle());
                 indexedWebPage.setUrl(webPageResponse.getUrl());
@@ -124,29 +132,53 @@ public class BuildIndexThread implements Runnable {
                 indexedWebPage.setReferencesTo(webPageResponse.getLinks());
                 indexedWebPage.setReferencedBy(crawlerTaskResponse.getParentPointers().getOrDefault(webPageResponse.getId(), new ArrayList<>()));
                 indexedWebPage.setPlainText(plainTextPage);
-                indexedWebPage.setStemmedText(stemmedText);
-                indexedWebPage.setWordFrequencies(stemmedTextObj.getWordFrequencies());
-                indexedWebPage.setStemmedWordCount(stemmedTextObj.getStemmedWordCount());
+                // For web content
+                indexedWebPage.setStemmedBody(stemmedBody);
+                indexedWebPage.setBodyWordFrequencies(stemmedBodyObj.getWordFrequencies());
+                indexedWebPage.setBodyStemmedWordCount(stemmedBodyObj.getStemmedWordCount());
+                // For title
+                indexedWebPage.setStemmedTitle(stemmedTitle);
+                indexedWebPage.setTitleWordFrequencies(stemmedTitleObj.getWordFrequencies());
+                indexedWebPage.setTitleStemmedWordCount(stemmedTitleObj.getStemmedWordCount());
 
                 indexedWebPageRepository.save(indexedWebPage);
 
                 // Store in inverted index
+                // For web page content
                 IndexedWebPage finalIndexedWebPage = indexedWebPage;
-                for (String word : indexedWebPage.getWordFrequencies().keySet()) {
-                    invertedIndexEntryMap.computeIfAbsent(word, (key) -> {
-                        InvertedIndexEntry invertedIndexEntry = new InvertedIndexEntry();
+                for (String word : indexedWebPage.getBodyWordFrequencies().keySet()) {
+                    webPageInvertedIndexEntryMap.computeIfAbsent(word, (key) -> {
+                        WebPageInvertedIndexEntry invertedIndexEntry = new WebPageInvertedIndexEntry();
                         invertedIndexEntry.setWord(word);
                         invertedIndexEntry.setWebPagesConcurrent(new ConcurrentLinkedQueue<>());
                         return invertedIndexEntry;
                     });
-                    invertedIndexEntryMap.get(word).getWebPagesConcurrent().add(finalIndexedWebPage.getId());
+                    webPageInvertedIndexEntryMap.get(word).getWebPagesConcurrent().add(finalIndexedWebPage.getId());
+                }
+                // For title
+                for (String word : indexedWebPage.getTitleWordFrequencies().keySet()) {
+                    titleInvertedIndexEntryMap.computeIfAbsent(word, (key) -> {
+                        TitleInvertedIndexEntry invertedIndexEntry = new TitleInvertedIndexEntry();
+                        invertedIndexEntry.setWord(word);
+                        invertedIndexEntry.setWebPagesConcurrent(new ConcurrentLinkedQueue<>());
+                        return invertedIndexEntry;
+                    });
+                    titleInvertedIndexEntryMap.get(word).getWebPagesConcurrent().add(finalIndexedWebPage.getId());
                 }
             });
 
             // Migrate all InvertedIndexEntry's webPagesConcurrent (ConcurrentLinkedQueue)
             // to webPages (ArrayList)
-            invertedIndexEntryMap.keySet().stream().parallel().forEach((key) -> {
-                InvertedIndexEntry indexEntry = invertedIndexEntryMap.get(key);
+            // For web pages
+            webPageInvertedIndexEntryMap.keySet().stream().parallel().forEach((key) -> {
+                WebPageInvertedIndexEntry indexEntry = webPageInvertedIndexEntryMap.get(key);
+                indexEntry.setWebPages(new ArrayList<>(indexEntry.getWebPagesConcurrent().size()));
+                indexEntry.getWebPages().addAll(indexEntry.getWebPagesConcurrent());
+                indexEntry.setWebPagesConcurrent(null);
+            });
+            // For title
+            titleInvertedIndexEntryMap.keySet().stream().parallel().forEach((key) -> {
+                TitleInvertedIndexEntry indexEntry = titleInvertedIndexEntryMap.get(key);
                 indexEntry.setWebPages(new ArrayList<>(indexEntry.getWebPagesConcurrent().size()));
                 indexEntry.getWebPages().addAll(indexEntry.getWebPagesConcurrent());
                 indexEntry.setWebPagesConcurrent(null);
@@ -154,23 +186,42 @@ public class BuildIndexThread implements Runnable {
 
             // Merge with the master index
             // Assuming the urls have never been processed before
-            List<InvertedIndexEntry> items = new ArrayList<>();
-            for (String word : invertedIndexEntryMap.keySet()) {
-                Optional<InvertedIndexEntry> invertedIndexEntryOpt = invertedIndexEntryRepository.findInvertedIndexEntriesByWord(word);
+            // For web page contents
+            List<WebPageInvertedIndexEntry> webPageItems = new ArrayList<>();
+            for (String word : webPageInvertedIndexEntryMap.keySet()) {
+                Optional<WebPageInvertedIndexEntry> invertedIndexEntryOpt = invertedIndexEntryRepository.findInvertedIndexEntriesByWord(word);
                 if (invertedIndexEntryOpt.isEmpty()) {
-                    items.add(invertedIndexEntryMap.get(word));
+                    webPageItems.add(webPageInvertedIndexEntryMap.get(word));
                 } else {
-                    InvertedIndexEntry invertedIndexEntry = invertedIndexEntryOpt.get();
+                    WebPageInvertedIndexEntry invertedIndexEntry = invertedIndexEntryOpt.get();
                     Set<String> webPageIdsSet = new HashSet<>();
                     for (String pageId : invertedIndexEntry.getWebPages())
                         webPageIdsSet.add(pageId);
-                    for (String pageId : invertedIndexEntryMap.get(word).getWebPages())
+                    for (String pageId : webPageInvertedIndexEntryMap.get(word).getWebPages())
                         if (!webPageIdsSet.contains(pageId))
                             invertedIndexEntry.getWebPages().add(pageId);
-                    items.add(invertedIndexEntry);
+                    webPageItems.add(invertedIndexEntry);
                 }
             }
-            invertedIndexEntryRepository.saveAll(items);
+            invertedIndexEntryRepository.saveAll(webPageItems);
+            // For titles
+            List<TitleInvertedIndexEntry> titleItems = new ArrayList<>();
+            for (String word : titleInvertedIndexEntryMap.keySet()) {
+                Optional<TitleInvertedIndexEntry> invertedIndexEntryOpt = titleInvertedIndexEntryRepository.findInvertedIndexEntriesByWord(word);
+                if (invertedIndexEntryOpt.isEmpty()) {
+                    titleItems.add(titleInvertedIndexEntryMap.get(word));
+                } else {
+                    TitleInvertedIndexEntry invertedIndexEntry = invertedIndexEntryOpt.get();
+                    Set<String> webPageIdsSet = new HashSet<>();
+                    for (String pageId : invertedIndexEntry.getWebPages())
+                        webPageIdsSet.add(pageId);
+                    for (String pageId : webPageInvertedIndexEntryMap.get(word).getWebPages())
+                        if (!webPageIdsSet.contains(pageId))
+                            invertedIndexEntry.getWebPages().add(pageId);
+                    titleItems.add(invertedIndexEntry);
+                }
+            }
+            titleInvertedIndexEntryRepository.saveAll(titleItems);
 
             // Save task
             indexTask = getCurrentIndexTask();

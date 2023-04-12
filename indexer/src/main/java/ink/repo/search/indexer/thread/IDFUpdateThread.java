@@ -1,7 +1,7 @@
 package ink.repo.search.indexer.thread;
 
-import ink.repo.search.common.model.InvertedIndexEntry;
-import ink.repo.search.indexer.repository.InvertedIndexEntryRepository;
+import ink.repo.search.common.model.WebPageInvertedIndexEntry;
+import ink.repo.search.indexer.repository.WebPageInvertedIndexEntryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
@@ -12,7 +12,7 @@ import java.util.List;
 @Scope("prototype")
 public class IDFUpdateThread implements Runnable {
     @Autowired
-    private InvertedIndexEntryRepository invertedIndexEntryRepository;
+    private WebPageInvertedIndexEntryRepository invertedIndexEntryRepository;
 
     @Override
     public void run() {
@@ -20,7 +20,7 @@ public class IDFUpdateThread implements Runnable {
         long startTime = System.currentTimeMillis();
 
         // Fetch all entries
-        List<InvertedIndexEntry> entries = invertedIndexEntryRepository.findAll();
+        List<WebPageInvertedIndexEntry> entries = invertedIndexEntryRepository.findAll();
         int n = entries.size();
 
         // Update IDF for each entry with idf = log2(N/df)

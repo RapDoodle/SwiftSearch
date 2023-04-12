@@ -1,7 +1,7 @@
 package ink.repo.search.indexer.thread;
 
 import ink.repo.search.common.model.IndexedWebPage;
-import ink.repo.search.common.repository.IndexedWebPageRepository;
+import ink.repo.search.indexer.repository.IndexedWebPageRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;

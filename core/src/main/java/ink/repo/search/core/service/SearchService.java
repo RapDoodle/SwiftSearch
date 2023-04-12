@@ -7,7 +7,7 @@ import ink.repo.search.common.util.TextPreprocessing;
 import ink.repo.search.core.model.SearchResponse;
 import ink.repo.search.core.model.SearchResultEntry;
 import ink.repo.search.core.repository.IndexedWebPageRepository;
-import ink.repo.search.core.repository.InvertedIndexEntryRepository;
+import ink.repo.search.core.repository.WebPageInvertedIndexEntryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +23,7 @@ public class SearchService {
     @Autowired
     private IndexedWebPageRepository indexedWebPageRepository;
     @Autowired
-    private InvertedIndexEntryRepository invertedIndexEntryRepository;
+    private WebPageInvertedIndexEntryRepository webPageInvertedIndexEntryRepository;
 
     private static class PageScoreTuple {
         PageScoreTuple(String pageId, double score) {
@@ -35,14 +35,16 @@ public class SearchService {
     }
 
     public SearchResponse search(String query, int page) {
+        int type = IndexedWebPage.BODY;
+
         StemmedText stemmedTextObj = TextPreprocessing.preprocessTextAndCount(query);
         Map<String, Integer> queryWordCount = stemmedTextObj.getWordFrequencies();
         List<String> queryWords = queryWordCount.keySet().stream().toList();
 
         // Get the inverted index for each word
-        List<InvertedIndexEntry> indexEntries = invertedIndexEntryRepository.findInvertedIndexEntriesByWordIn(queryWords);
+        List<InvertedIndexEntry> indexEntries = webPageInvertedIndexEntryRepository.findWebPageInvertedIndexEntriesByWordIn(queryWords);
 
-        // Precalculated IDF scores
+        // Get the precalculated IDF scores
         Map<String, Double> wordIdfs = new HashMap<>();
         indexEntries.forEach((entry) -> {
             wordIdfs.put(entry.getWord(), entry.getIdf());
@@ -51,14 +53,13 @@ public class SearchService {
         // Calculate the term frequency for each word in the query
         int queryLength = queryWordCount.values().stream().filter(Objects::nonNull).mapToInt(freq -> freq).sum();
         Map<String, Double> queryTfIdfScores = new HashMap<>();
-        double queryNorm = 0;
+        double querySumSquared = 0;
         for (String word : queryWordCount.keySet()) {
             double tfidf = ((double) queryWordCount.get(word) / queryLength) * wordIdfs.get(word);
             queryTfIdfScores.put(word, tfidf);
-            queryNorm += (tfidf * tfidf);
+            querySumSquared += (tfidf * tfidf);
         }
-        queryNorm = Math.sqrt(queryNorm);
-        final double queryNormFinal = queryNorm;
+        final double queryNorm = Math.sqrt(querySumSquared);
 
         // Get all pages according to the ids in the inverted index
         Set<String> indexEntriesIds = new HashSet<>();
@@ -76,20 +77,20 @@ public class SearchService {
         // Calculate the cosine similarity between each document and the query
         positions.stream().parallel().forEach((i) -> {
             IndexedWebPage webPage = webPages.get(i);
-            Map<String, Integer> wordFrequencies = webPage.getWordFrequencies();
+            Map<String, Integer> wordFrequencies = webPage.getWordFrequencies(type);
             // TODO: Handle when stemmedWordCount is null
-            int stemmedWordCount = webPage.getStemmedWordCount();
+            int stemmedWordCount = webPage.getStemmedWordCount(type);
             double dotProd = 0;
             double docNorm = 0;
             for (String word : queryWords) {
                 if (!wordFrequencies.containsKey(word))
                     continue;
-                double currTfidf = ((double) wordFrequencies.get(word) / webPage.getStemmedWordCount()) * wordIdfs.get(word);
+                double currTfidf = ((double) wordFrequencies.get(word) / stemmedWordCount) * wordIdfs.get(word);
                 dotProd += currTfidf * queryTfIdfScores.get(word);
                 docNorm += (currTfidf * currTfidf);
             }
             docNorm = Math.sqrt(docNorm);
-            tfidfScores[i] = dotProd / (docNorm * queryNormFinal);
+            tfidfScores[i] = dotProd / (docNorm * queryNorm);
         });
 
         List<PageScoreTuple> pageScoreTupleList = new ArrayList<>(webPagesSize);
@@ -102,11 +103,11 @@ public class SearchService {
         int offset = PAGE_SIZE * (page - 1);
 
         // Response
-        SearchResponse response = new SearchResponse();
-        response.setQuery(query);
-        response.setResults(new ArrayList<>());
-        response.setResultsCount(webPagesSize);
-        response.setPage(page);
+        SearchResponse searchResponse = new SearchResponse();
+        searchResponse.setQuery(query);
+        searchResponse.setResults(new ArrayList<>());
+        searchResponse.setResultsCount(webPagesSize);
+        searchResponse.setPage(page);
         for (int i = 0; i < PAGE_SIZE; ++i) {
             int order = offset + i;
             if (order > webPagesSize - 1)
@@ -126,15 +127,15 @@ public class SearchService {
 
             Map<String, Integer> matchedWords = new HashMap<>();
             for (String word : queryWords) {
-                if (!indexedWebPage.getWordFrequencies().containsKey(word))
+                if (!indexedWebPage.getWordFrequencies(type).containsKey(word))
                     continue;
-                matchedWords.put(word, indexedWebPage.getWordFrequencies().get(word));
+                matchedWords.put(word, indexedWebPage.getWordFrequencies(type).get(word));
             }
             searchResultEntry.setMatchedWords(matchedWords);
 
-            response.getResults().add(searchResultEntry);
+            searchResponse.getResults().add(searchResultEntry);
         }
 
-        return response;
+        return searchResponse;
     }
 }

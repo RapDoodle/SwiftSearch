@@ -15,7 +15,8 @@ public interface IndexedWebPageRepository extends MongoRepository<IndexedWebPage
 
     Optional<IndexedWebPage> findIndexedWebPageByUrl(String url);
 
-    @Query(fields = "{ 'id': 1, 'wordFrequencies': 1, 'stemmedWordCount': 1 }")
+    @Query(fields = "{ 'id': 1, 'bodyWordFrequencies': 1, 'bodyStemmedWordCount': 1, " +
+            "'titleWordFrequencies': 1, 'titleStemmedWordCount': 1 }")
     List<IndexedWebPage> findIndexedWebPagesByIdIn(List<String> ids);
 
 }
