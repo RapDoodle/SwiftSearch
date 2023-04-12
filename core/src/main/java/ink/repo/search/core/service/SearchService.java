@@ -11,15 +11,24 @@ import ink.repo.search.core.repository.WebPageInvertedIndexEntryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class SearchService {
-    private static final int PAGE_SIZE = 10;
+    @Value("${search.page-size}")
+    private int PAGE_SIZE;
+    private static final Pattern pharseExtractPattern = Pattern.compile("[\"“”]([\\w\\s]+)[\"“”]");
     @Autowired
     private IndexedWebPageRepository indexedWebPageRepository;
     @Autowired
@@ -34,15 +43,16 @@ public class SearchService {
         public double score;
     }
 
-    public SearchResponse search(String query, int page) {
+    public SearchResponse search(final String query, final int page) {
         int type = IndexedWebPage.BODY;
 
         StemmedText stemmedTextObj = TextPreprocessing.preprocessTextAndCount(query);
         Map<String, Integer> queryWordCount = stemmedTextObj.getWordFrequencies();
         List<String> queryWords = queryWordCount.keySet().stream().toList();
 
-        // Get the inverted index for each word
-        List<InvertedIndexEntry> indexEntries = webPageInvertedIndexEntryRepository.findWebPageInvertedIndexEntriesByWordIn(queryWords);
+        // Get the inverted index for each word in the query
+        List<InvertedIndexEntry> indexEntries =
+                webPageInvertedIndexEntryRepository.findWebPageInvertedIndexEntriesByWordIn(queryWords);
 
         // Get the precalculated IDF scores
         Map<String, Double> wordIdfs = new HashMap<>();
@@ -50,22 +60,53 @@ public class SearchService {
             wordIdfs.put(entry.getWord(), entry.getIdf());
         });
 
+        // Get all pages according to the ids in the inverted index
+        Set<String> matchedWebPagesIds = new HashSet<>();
+        for (InvertedIndexEntry entry : indexEntries)
+            matchedWebPagesIds.addAll(entry.getWebPages());
+
+        // Phrase search
+        Matcher pharseMatcher = pharseExtractPattern.matcher(query);
+        if (pharseMatcher.find()) {
+            // When double quote pairs are used
+            List<IndexedWebPage> webPagesWithContent = indexedWebPageRepository.findIndexedWebPagesIgnoreCaseByIdIn(
+                    matchedWebPagesIds.stream().toList());
+
+            // Get all phrases
+            pharseMatcher.reset();
+            List<String> phrases = new ArrayList<>();
+            while (pharseMatcher.find()) {
+                phrases.add(pharseMatcher.group(1));
+            }
+
+            // Find all pages with matching phrases
+            ConcurrentHashMap<String, Integer> phrasesMatchedWebPagesIds = new ConcurrentHashMap<>();
+            webPagesWithContent.stream().parallel().forEach((currPage) -> {
+                // The phrase should appear in the title or the text
+                boolean matchBody = false, matchTitle = false;
+                if (containsPhrases(currPage.getTitle() + "\n" + currPage.getPlainText(), phrases, true)) {
+                    phrasesMatchedWebPagesIds.put(currPage.getId(), 0);
+                }
+            });
+            matchedWebPagesIds = phrasesMatchedWebPagesIds.keySet();
+        }
+
+        // Fetch the matching web pages
+        List<IndexedWebPage> webPages = indexedWebPageRepository.findIndexedWebPagesByIdIn(
+                matchedWebPagesIds.stream().toList());
+
         // Calculate the term frequency for each word in the query
         int queryLength = queryWordCount.values().stream().filter(Objects::nonNull).mapToInt(freq -> freq).sum();
         Map<String, Double> queryTfIdfScores = new HashMap<>();
         double querySumSquared = 0;
         for (String word : queryWordCount.keySet()) {
+            if (!wordIdfs.containsKey(word))
+                continue;
             double tfidf = ((double) queryWordCount.get(word) / queryLength) * wordIdfs.get(word);
             queryTfIdfScores.put(word, tfidf);
             querySumSquared += (tfidf * tfidf);
         }
         final double queryNorm = Math.sqrt(querySumSquared);
-
-        // Get all pages according to the ids in the inverted index
-        Set<String> indexEntriesIds = new HashSet<>();
-        for (InvertedIndexEntry entry : indexEntries)
-            indexEntriesIds.addAll(entry.getWebPages());
-        List<IndexedWebPage> webPages = indexedWebPageRepository.findIndexedWebPagesByIdIn(indexEntriesIds.stream().toList());
 
         // Get the TF-IDF scores for all retrieved web pages
         int webPagesSize = webPages.size();
@@ -112,7 +153,8 @@ public class SearchService {
             int order = offset + i;
             if (order > webPagesSize - 1)
                 break;
-            Optional<IndexedWebPage> indexedWebPageOpt = indexedWebPageRepository.findById(pageScoreTupleList.get(order).pageId);
+            Optional<IndexedWebPage> indexedWebPageOpt = indexedWebPageRepository.findById(
+                    pageScoreTupleList.get(order).pageId);
             if (indexedWebPageOpt.isEmpty())
                 continue;
             IndexedWebPage indexedWebPage = indexedWebPageOpt.get();
@@ -137,5 +179,25 @@ public class SearchService {
         }
 
         return searchResponse;
+    }
+
+    private static boolean containsPhrases(final String text, final List<String> phrases, boolean parallel) {
+        Stream<String> textStream = text.lines();
+        if (parallel)
+            textStream = textStream.parallel();
+        for (String phrase : phrases) {
+            AtomicBoolean match = new AtomicBoolean(false);
+            Pattern phrasePattern = Pattern.compile(Pattern.quote(phrase), Pattern.CASE_INSENSITIVE);
+            textStream.forEach((line) -> {
+                if (match.get())
+                    return;
+                if (!phrasePattern.matcher(line).find())
+                    return;
+                match.set(true);
+            });
+            if (!match.get())
+                return false;
+        }
+        return true;
     }
 }

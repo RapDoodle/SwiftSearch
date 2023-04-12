@@ -19,4 +19,7 @@ public interface IndexedWebPageRepository extends MongoRepository<IndexedWebPage
             "'titleWordFrequencies': 1, 'titleStemmedWordCount': 1 }")
     List<IndexedWebPage> findIndexedWebPagesByIdIn(List<String> ids);
 
+    @Query(fields = "{ 'id': 1, 'plainText': 1 }")
+    List<IndexedWebPage> findIndexedWebPagesIgnoreCaseByIdIn(List<String> ids);
+
 }
