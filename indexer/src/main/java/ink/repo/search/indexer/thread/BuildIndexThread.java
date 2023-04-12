@@ -17,7 +17,9 @@ import ink.repo.search.indexer.repository.TitleInvertedIndexEntryRepository;
 import ink.repo.search.indexer.repository.WebPageInvertedIndexEntryRepository;
 import org.jsoup.nodes.Document;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Scope;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Component;
 
 import org.springframework.web.reactive.function.client.WebClient;
@@ -30,6 +32,10 @@ import java.util.concurrent.ConcurrentMap;
 @Component
 @Scope("prototype")
 public class BuildIndexThread implements Runnable {
+    @Autowired
+    private ApplicationContext applicationContext;
+    @Autowired
+    private TaskExecutor taskExecutor;
     @Autowired
     private IndexTaskRepository indexTaskRepository;
     @Autowired
@@ -229,6 +235,10 @@ public class BuildIndexThread implements Runnable {
             indexTask.setTaskStatus(IndexTask.TASK_STATUS_FINISHED);
             indexTask.setDuration(System.currentTimeMillis() - before);
             indexTaskRepository.save(indexTask);
+
+            // Update all inverted index's IDF
+            IDFUpdateThread idfUpdateThread = applicationContext.getBean(IDFUpdateThread.class);
+            taskExecutor.execute(idfUpdateThread);
         } catch (Exception e) {
             e.printStackTrace();
             indexTask.setTaskStatus(IndexTask.TASK_STATUS_ERROR);
