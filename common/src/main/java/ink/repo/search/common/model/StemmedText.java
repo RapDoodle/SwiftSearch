@@ -15,4 +15,5 @@ public class StemmedText {
     String stemmedText;
     Map<String, Integer> wordFrequencies;
     int stemmedWordCount;
+    int maxTf;
 }

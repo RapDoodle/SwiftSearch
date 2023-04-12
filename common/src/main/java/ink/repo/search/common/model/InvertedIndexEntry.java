@@ -43,4 +43,13 @@ public class InvertedIndexEntry {
     public void setWebPagesConcurrent(ConcurrentLinkedQueue<String> webPagesConcurrent) {
         this.webPagesConcurrent = webPagesConcurrent;
     }
+
+    @Override
+    public String toString() {
+        return "InvertedIndexEntry{" +
+                "word='" + word + '\'' +
+                ", webPagesLength=" + webPages.size() +
+                ", idf=" + idf +
+                '}';
+    }
 }

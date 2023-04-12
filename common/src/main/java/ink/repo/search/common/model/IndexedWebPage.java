@@ -40,6 +40,8 @@ public class IndexedWebPage {
     private Double pageRank;
     private Integer bodyStemmedWordCount;
     private Integer titleStemmedWordCount;
+    private Integer bodyMaxTf;
+    private Integer titleMaxTf;
 
     public Map<String, Integer> getWordFrequencies(int type) {
         return switch (type) {
@@ -69,6 +71,14 @@ public class IndexedWebPage {
         return switch (type) {
             case BODY -> this.bodyStemmedWordCount;
             case TITLE -> this.titleStemmedWordCount;
+            default -> null;
+        };
+    }
+
+    public Integer getMaxTf(int type) {
+        return switch (type) {
+            case BODY -> this.bodyMaxTf;
+            case TITLE -> this.titleMaxTf;
             default -> null;
         };
     }

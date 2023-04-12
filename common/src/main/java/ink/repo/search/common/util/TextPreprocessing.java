@@ -38,10 +38,9 @@ public class TextPreprocessing {
         Stemmer stemmer = new Stemmer();
         Map<String, Integer> wordFrequencies = new HashMap<>();
         StringBuilder stemmedTextSb = new StringBuilder();
-        AtomicInteger lineCount = new AtomicInteger();
-        AtomicInteger stemmedWordCount = new AtomicInteger();
-        text.lines().forEach(line -> {
-            lineCount.incrementAndGet();
+        int lineCount = 0, stemmedWordCount = 0, maxTf = 0;
+        for (final String line : text.lines().toList()) {
+            ++lineCount;
             String[] words = line.split(" ");
             int lineWordCount = 0;
             for (String word : words) {
@@ -56,8 +55,10 @@ public class TextPreprocessing {
                 // Get word stem
                 word = stemmer.stem(word);
                 // Word count
-                stemmedWordCount.getAndIncrement();
-                wordFrequencies.put(word, wordFrequencies.getOrDefault(word, 0) + 1);
+                ++stemmedWordCount;
+                int tf = wordFrequencies.getOrDefault(word, 0) + 1;
+                maxTf = Math.max(maxTf, tf);
+                wordFrequencies.put(word, tf);
                 // Output
                 stemmedTextSb.append(word);
                 stemmedTextSb.append(" ");
@@ -66,15 +67,16 @@ public class TextPreprocessing {
             if (lineWordCount > 0)
                 stemmedTextSb.deleteCharAt(stemmedTextSb.length() - 1);
             stemmedTextSb.append('\n');
-        });
+        }
         // Should not be a new line for a document with an empty line
-        if (lineCount.get() == 1)
+        if (lineCount == 1)
             stemmedTextSb.deleteCharAt(stemmedTextSb.length() - 1);
 
         StemmedText stemmedText = new StemmedText();
         stemmedText.setStemmedText(stemmedTextSb.toString());
         stemmedText.setWordFrequencies(wordFrequencies);
-        stemmedText.setStemmedWordCount(stemmedWordCount.get());
+        stemmedText.setStemmedWordCount(stemmedWordCount);
+        stemmedText.setMaxTf(maxTf);
         return stemmedText;
     }
 }

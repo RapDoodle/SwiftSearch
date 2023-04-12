@@ -4,17 +4,11 @@ import ink.repo.search.common.dto.CrawlerTaskResponse;
 import ink.repo.search.common.dto.WebPageResponse;
 import ink.repo.search.common.exception.AttributeAlreadyDefinedException;
 import ink.repo.search.common.exception.NotFoundException;
-import ink.repo.search.common.model.IndexedWebPage;
-import ink.repo.search.common.model.StemmedText;
-import ink.repo.search.common.model.TitleInvertedIndexEntry;
-import ink.repo.search.common.model.WebPageInvertedIndexEntry;
+import ink.repo.search.common.model.*;
 import ink.repo.search.common.util.HTMLUtils;
 import ink.repo.search.common.util.TextPreprocessing;
 import ink.repo.search.indexer.model.IndexTask;
-import ink.repo.search.indexer.repository.IndexTaskRepository;
-import ink.repo.search.indexer.repository.IndexedWebPageRepository;
-import ink.repo.search.indexer.repository.TitleInvertedIndexEntryRepository;
-import ink.repo.search.indexer.repository.WebPageInvertedIndexEntryRepository;
+import ink.repo.search.indexer.repository.*;
 import org.jsoup.nodes.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
@@ -58,6 +52,7 @@ public class BuildIndexThread implements Runnable {
     @Override
     public void run() {
         // Measure task duration
+        System.out.println("Constructing search index...");
         long before = System.currentTimeMillis();
 
         // Get the index task
@@ -142,10 +137,12 @@ public class BuildIndexThread implements Runnable {
                 indexedWebPage.setStemmedBody(stemmedBody);
                 indexedWebPage.setBodyWordFrequencies(stemmedBodyObj.getWordFrequencies());
                 indexedWebPage.setBodyStemmedWordCount(stemmedBodyObj.getStemmedWordCount());
+                indexedWebPage.setBodyMaxTf(stemmedBodyObj.getMaxTf());
                 // For title
                 indexedWebPage.setStemmedTitle(stemmedTitle);
                 indexedWebPage.setTitleWordFrequencies(stemmedTitleObj.getWordFrequencies());
                 indexedWebPage.setTitleStemmedWordCount(stemmedTitleObj.getStemmedWordCount());
+                indexedWebPage.setTitleMaxTf(stemmedTitleObj.getMaxTf());
 
                 indexedWebPageRepository.save(indexedWebPage);
 
@@ -221,7 +218,7 @@ public class BuildIndexThread implements Runnable {
                     Set<String> webPageIdsSet = new HashSet<>();
                     for (String pageId : invertedIndexEntry.getWebPages())
                         webPageIdsSet.add(pageId);
-                    for (String pageId : webPageInvertedIndexEntryMap.get(word).getWebPages())
+                    for (String pageId : titleInvertedIndexEntryMap.get(word).getWebPages())
                         if (!webPageIdsSet.contains(pageId))
                             invertedIndexEntry.getWebPages().add(pageId);
                     titleItems.add(invertedIndexEntry);
@@ -244,6 +241,7 @@ public class BuildIndexThread implements Runnable {
             indexTask.setTaskStatus(IndexTask.TASK_STATUS_ERROR);
             indexTaskRepository.save(indexTask);
         }
+        System.out.println("Index built in " + (System.currentTimeMillis() - before) + " ms");
     }
 
     private void checkStopped() throws NotFoundException {
