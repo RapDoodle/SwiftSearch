@@ -1,5 +1,6 @@
-package ink.repo.search.core.model;
+package ink.repo.search.common.dto;
 
+import ink.repo.search.common.model.SearchResultEntry;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,7 +12,7 @@ import java.util.List;
 @NoArgsConstructor
 @Builder
 @Data
-public class SearchResponse {
+public class QueryServerResponse {
     public String query;
     public List<SearchResultEntry> results;
     public Long duration;  // Unit: ms

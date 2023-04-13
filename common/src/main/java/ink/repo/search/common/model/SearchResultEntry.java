@@ -1,4 +1,4 @@
-package ink.repo.search.core.model;
+package ink.repo.search.common.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

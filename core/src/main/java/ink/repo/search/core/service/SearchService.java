@@ -1,11 +1,11 @@
 package ink.repo.search.core.service;
 
+import ink.repo.search.common.dto.QueryServerResponse;
 import ink.repo.search.common.model.IndexedWebPage;
 import ink.repo.search.common.model.InvertedIndexEntry;
+import ink.repo.search.common.model.SearchResultEntry;
 import ink.repo.search.common.model.StemmedText;
 import ink.repo.search.common.util.TextPreprocessing;
-import ink.repo.search.core.model.SearchResponse;
-import ink.repo.search.core.model.SearchResultEntry;
 import ink.repo.search.core.repository.IndexedWebPageRepository;
 import ink.repo.search.core.repository.TitleInvertedIndexEntryRepository;
 import ink.repo.search.core.repository.WebPageInvertedIndexEntryRepository;
@@ -45,7 +45,7 @@ public class SearchService {
         public double score;
     }
 
-    public SearchResponse search(final String query, final int page) {
+    public QueryServerResponse search(final String query, final int page) {
         int type = IndexedWebPage.BODY;
 
         StemmedText stemmedQueryObj = TextPreprocessing.preprocessTextAndCount(query);
@@ -123,7 +123,7 @@ public class SearchService {
         int offset = PAGE_SIZE * (page - 1);
 
         // Response
-        SearchResponse searchResponse = new SearchResponse();
+        QueryServerResponse searchResponse = new QueryServerResponse();
         searchResponse.setQuery(query);
         searchResponse.setResults(new ArrayList<>());
         searchResponse.setResultsCount(webPagesSize);

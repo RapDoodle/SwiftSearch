@@ -1,6 +1,6 @@
 package ink.repo.search.core.controller;
 
-import ink.repo.search.core.model.SearchResponse;
+import ink.repo.search.common.dto.QueryServerResponse;
 import ink.repo.search.core.service.SearchService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,11 +17,11 @@ public class SearchController {
     private SearchService searchService;
 
     @GetMapping
-    public SearchResponse search(String query, @Nullable Integer page) {
+    public QueryServerResponse search(String query, @Nullable Integer page) {
         long beginTime = System.currentTimeMillis();
         if (page == null)
             page = 1;
-        SearchResponse response = searchService.search(query, page);
+        QueryServerResponse response = searchService.search(query, page);
         response.setDuration(System.currentTimeMillis() - beginTime);
         return response;
     }
