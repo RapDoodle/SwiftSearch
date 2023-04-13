@@ -6,7 +6,7 @@
 </head>
 <body>
     <p th:text="'Query: ' + ${queryResult.getQuery()}" />
-    <p th:text="'Request completed in ' + ${queryResult.getDuration() / 1000} + 's.'" />
+    <p th:text="'Request completed in ' + ${queryResult.getDuration()} + 'ms.'" />
     <p th:text="'There are ' + ${queryResult.getResultsCount()} + ' results.'" />
     <p th:text="'Current page: ' + ${queryResult.getPage()}" />
     <p>Results: </p>
