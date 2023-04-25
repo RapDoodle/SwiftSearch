@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Swift Search</title>
+    <link type="text/css" rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header>
+    <!-- Logo -->
+    <div class="logo-area">
+        <a href="#" title="Go to Swift Search">
+            <img src="images/swift-logo.png" alt="Swift" class="logo">
+        </a>
+    </div>
+    <!-- Search -->
+    <div id="search-area">
+        <form class="search-container" method="GET" action="evaluate">
+            <button type="submit" class="search-btn">
+                <svg viewBox="0 0 24 24">
+                    <path
+                            d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z">
+                    </path>
+                </svg>
+            </button>
+            <input type="search" title="Search" name="query" th:value="${queryResult.getQuery()}" id="queryValue" class="search-bar">
+        </form>
+    </div>
+</header>
+    <p th:text="'Query: ' + ${queryResult.getQuery()}" />
+    <p th:text="'Request completed in ' + ${queryResult.getDuration()} + 'ms.'" />
+    <p th:text="'There are ' + ${queryResult.getResultsCount()} + ' results.'" />
+    <p th:text="'Current page: ' + ${queryResult.getPage()}" />
+    <p>Results: </p>
+    <div class="search-result" th:each="resultEntry: ${queryResult.getResults()}">
+        <table>
+            <tr>
+                <td><h4><p th:text="'Score: '+${resultEntry.getScore()}"/></h4></td>
+                <td>
+                    &nbsp;&nbsp;
+                </td>
+                <td>
+                    <h4>Page title: <a th:text="${resultEntry.getTitle()}" th:href="${resultEntry.getUrl()}"/></h4>
+                </td>
+            </tr>
+            <tr>
+                <td> </td>
+                <td>
+                    &nbsp;&nbsp;
+                </td>
+                <td>
+                    <h4>Url: <a th:text="${resultEntry.getUrl()}" th:href="${resultEntry.getUrl()}"/></h4>
+                </td>
+            </tr>
+            <tr>
+                <td> </td>
+                <td>
+                    &nbsp;&nbsp;
+                </td>
+                <td>
+                    <h4><p th:text="'Last modification date: '+${resultEntry.getLastModifiedDate()}" /></h4>
+                </td>
+            </tr>
+            <tr>
+                <td> </td>
+                <td>
+                    &nbsp;&nbsp;
+                </td>
+                <td>
+                    <h4><p th:text="'Size of page: '" /></h4>
+                </td>
+            </tr>
+            <tr>
+            <td> </td>
+            <td>
+                &nbsp;&nbsp;
+            </td>
+            <td>
+                <h4>keyword 1 freq 1; keyword 2 freq 2; . . .</h4>
+            </td>
+        </tr><tr>
+            <td> </td>
+            <td>
+                &nbsp;&nbsp;
+            </td>
+            <td>
+                <h4><p th:text="'Parent link: '" /></h4>
+                <h4 th:each="Referenced: ${resultEntry.getReferencedBy()}"><p th:text="${Referenced}" /></h4>
+            </td>
+        </tr>
+            <tr>
+                <td> </td>
+                <td>
+                    &nbsp;&nbsp;
+                </td>
+                <td>
+                    <h4><p th:text="'Child link: '" /></h4>
+                    <h4 th:each="References: ${resultEntry.getReferencesTo()}"><p th:text="${References}" /></h4>
+                </td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>

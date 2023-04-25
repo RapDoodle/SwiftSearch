@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
-public class DemoController {
+public class SearchController {
     @Autowired
     SearchService searchService;
 
@@ -20,7 +20,7 @@ public class DemoController {
     }
 
     @RequestMapping("/search")
-    public String hello(Model model, @RequestParam(value="query", required=true, defaultValue="World") String query,
+    public String searchResults(Model model, @RequestParam(value="query", required=true) String query,
                         @RequestParam(value="page", required=false, defaultValue="1") String page) {
         // TODO: Reject empty query
         int pageNum;
@@ -28,13 +28,31 @@ public class DemoController {
             pageNum = Integer.parseInt(page);
         } catch(NumberFormatException e) {
             // TODO: Return error page informing bad request
-            return "demo";
+            return "400";
         }
         QueryServerResponse queryServerResponse = searchService.search(query, pageNum);
         System.out.println(queryServerResponse);
         model.addAttribute("queryResult", queryServerResponse);
 
-        return "demo";
+        return "searchResults";
+    }
+
+    @RequestMapping("/evaluate")
+    public String evaluate(Model model, @RequestParam(value="query", required=true) String query,
+                        @RequestParam(value="page", required=false, defaultValue="1") String page) {
+        // TODO: Reject empty query
+        int pageNum;
+        try {
+            pageNum = Integer.parseInt(page);
+        } catch(NumberFormatException e) {
+            // TODO: Return error page informing bad request
+            return "400";
+        }
+        QueryServerResponse queryServerResponse = searchService.search(query, pageNum);
+        System.out.println(queryServerResponse);
+        model.addAttribute("queryResult", queryServerResponse);
+
+        return "evaluate";
     }
 }
 

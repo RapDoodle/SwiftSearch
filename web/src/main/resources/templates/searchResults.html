@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Swift Search</title>
+  <link type="text/css" rel="stylesheet" href="css/normalize.css">
+  <link type="text/css" rel="stylesheet" href="css/reset-local.css">
+  <link type="text/css" rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+  <header>
+    <!-- Logo -->
+    <div class="logo-area">
+      <a href="#" title="Go to Swift Search">
+        <img src="images/swift-logo.png" alt="Swift" class="logo">
+      </a>
+    </div>
+    <!-- Search -->
+    <div id="search-area">
+      <form class="search-container" method="GET" action="search">
+        <button type="submit" class="search-btn">
+          <svg viewBox="0 0 24 24">
+            <path
+              d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z">
+            </path>
+          </svg>
+        </button>
+        <input type="search" title="Search" name="query" th:value="${queryResult.getQuery()}" id="queryValue" class="search-bar">
+      </form>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+    <main role="main">
+    <div id="main">
+      <p class="results-stats">
+        There are <span id="results" th:text="${queryResult.getResultsCount()}"></span> results. Request completed in <span th:text="${queryResult.getDuration()}"></span> ms. Current Page: <span id="pageNum" th:text="${queryResult.getPage()}"></span>
+      </p>
+      <div class="search-results-block">
+        <!-- Search Results -->
+
+        <div class="search-result" th:each="resultEntry: ${queryResult.getResults()}">
+          <p class="cite" th:text="${resultEntry.getUrl()}" /></p>
+          <a th:href="${resultEntry.getUrl()}">
+            <h3 th:text="${resultEntry.getTitle()}" />
+          </a>
+          <p class="result-text" th:text="${resultEntry.getTitle()}" /></p>
+        </div>
+      </div>
+
+      
+      <!-- Pager -->
+      <table class="pager" role="presentation">
+        <tr id="pageResult">
+
+        </tr>
+      </table>
+
+    </div>
+  </main>
+
+    <!-- Footer -->
+  <footer class="footer" id="footId">
+    <div class="location">
+      <span class="space">Place</span>
+      <div class="location-row">
+        <span class="circle"></span>
+        <span class="moonland">Hong Kong</span>
+        <span class="loc">- From your Internet address -</span>
+        <a href="#" class="footer-loc-link">Use precise location</a>
+      </div>
+    </div>
+    <div class="footer-links">
+      <a href="#" class="footer-link">Help</a>
+      <a href="#" class="footer-link">Send feedback</a>
+      <a href="#" class="footer-link">Privacy</a>
+      <a href="#" class="footer-link">Learn more</a>
+    </div>
+  </footer>
+  <script type="text/javascript">
+    var num = Math.ceil(parseInt(document.getElementById('results').innerText) / 10);
+    var target=document.getElementById('footId');
+    if(num == 0){
+      target.style.display="none";
+    }
+    var page = parseInt(document.getElementById('pageNum').innerText);
+    var query = document.getElementById('queryValue').value;
+	var oTR = document.getElementById('pageResult');
+	var Td = document.createElement('td');
+	Td.class = "pager-td";
+	var a = document.createElement('a');
+	a.setAttribute('style', 'color:black;Font-size:18px;Font-weight:normal');
+	a.setAttribute("onmouseover","this.style.color='purple';");
+	if(page <= 1){
+      a.href = "http://127.0.0.1:8610/search?query="+query+"&page="+1+"#";
+    }else{
+      a.href = "http://127.0.0.1:8610/search?query="+query+"&page="+(page-1)+"#";
+    }
+    if(num == 0){
+      a.innerHTML = '';
+    }else{
+      a.innerHTML = 'Prev';
+    }
+	Td.appendChild(a);
+	oTR.appendChild(Td);
+
+	for (var i = 0; i < num; i++) {
+	    var block = document.createElement('td');
+        block.class = "pager-td";
+        var blo = document.createElement('span');
+        blo.setAttribute('style', 'color:white');
+        blo.innerHTML = 's';
+        block.appendChild(blo);
+	    oTR.appendChild(block);
+		var aTd = document.createElement('td');
+		aTd.class = "pager-td";
+		var ba = document.createElement('a');
+		ba.href = "http://127.0.0.1:8610/search?query="+query+"&page="+(i+1)+"#";
+		ba.setAttribute('style', 'color:black;Font-size:18px;Font-weight:normal');
+		ba.setAttribute("onmouseover","this.style.color='purple';");
+		ba.innerHTML = i+1;
+		aTd.appendChild(ba);
+		oTR.appendChild(aTd);
+	};
+	var bl = document.createElement('td');
+    bl.class = "pager-td";
+    var bloc = document.createElement('span');
+    bloc.setAttribute('style', 'color:white');
+    bloc.innerHTML = 's';
+    bl.appendChild(bloc);
+    oTR.appendChild(bl);
+	var d = document.createElement('td');
+	d.class = "pager-td";
+	var c = document.createElement('a');
+	c.setAttribute('style', 'color:black;Font-size:18px;Font-weight:normal');
+	c.setAttribute("onmouseover","this.style.color='purple';");
+	if(page >= num){
+      c.href = "http://127.0.0.1:8610/search?query="+query+"&page="+num+"#";
+    }else{
+      c.href = "http://127.0.0.1:8610/search?query="+query+"&page="+(page+1)+"#";
+    }
+	if(num == 0){
+      c.innerHTML = '';
+    }else{
+      c.innerHTML = 'Next';
+    }
+	d.appendChild(c);
+	oTR.appendChild(d);
+  </script>
+</body>
+</html>
