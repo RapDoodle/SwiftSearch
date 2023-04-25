@@ -10,7 +10,5 @@ import java.util.Optional;
 @Component
 @Repository
 public interface TitleInvertedIndexEntryRepository extends MongoRepository<TitleInvertedIndexEntry, String> {
-
     Optional<TitleInvertedIndexEntry> findInvertedIndexEntriesByWord(String word);
-
 }

@@ -6,7 +6,5 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import java.util.Optional;
 
 public interface StoreRepository extends MongoRepository<StoreEntry, String> {
-
     Optional<StoreEntry> findStoreEntryByKey(String key);
-
 }

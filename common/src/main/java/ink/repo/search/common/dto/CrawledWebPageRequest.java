@@ -9,8 +9,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class IndexerTaskRequest {
-    private String crawlerServerAddr;
-    private String crawlerServerProtocol;
-    private String crawlerTaskId;
+public class CrawledWebPageRequest {
+    private String id;
+    private String url;
 }

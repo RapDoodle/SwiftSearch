@@ -1,14 +1,13 @@
 package ink.repo.search.core.service;
 
-import ink.repo.search.common.dto.QueryServerResponse;
-import ink.repo.search.common.model.IndexedWebPage;
-import ink.repo.search.common.model.InvertedIndexEntry;
-import ink.repo.search.common.model.SearchResultEntry;
-import ink.repo.search.common.model.StemmedText;
+import ink.repo.search.common.dto.EvaluateResponse;
+import ink.repo.search.common.dto.SearchResponse;
+import ink.repo.search.common.model.*;
+import ink.repo.search.common.util.Stemmer;
 import ink.repo.search.common.util.TextPreprocessing;
-import ink.repo.search.core.repository.IndexedWebPageRepository;
-import ink.repo.search.core.repository.TitleInvertedIndexEntryRepository;
-import ink.repo.search.core.repository.WebPageInvertedIndexEntryRepository;
+import ink.repo.search.core.model.PageRankingResult;
+import ink.repo.search.core.model.PageScoreTuple;
+import ink.repo.search.core.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +19,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 @Service
@@ -28,6 +29,8 @@ import java.util.stream.Stream;
 public class SearchService {
     @Value("${search.page-size}")
     private int PAGE_SIZE;
+    @Value("${search.summary-window-size}")
+    private int SUMMARY_WINDOW_SIZE;
     private static final Pattern pharseExtractPattern = Pattern.compile("[\"“”]([\\w\\s]+)[\"“”]");
     @Autowired
     private IndexedWebPageRepository indexedWebPageRepository;
@@ -35,19 +38,162 @@ public class SearchService {
     private WebPageInvertedIndexEntryRepository webPageInvertedIndexEntryRepository;
     @Autowired
     private TitleInvertedIndexEntryRepository titleInvertedIndexEntryRepository;
+    @Autowired
+    private PhraseSearchWebPageRepository phraseSearchWebPageRepository;
+    @Autowired
+    private SearchWebPageRepository searchWebPageRepository;
+    private static final Pattern nonAlphaNumeric = Pattern.compile("[^a-zA-Z0-9 /]");
 
-    private static class PageScoreTuple {
-        PageScoreTuple(String pageId, double score) {
-            this.pageId = pageId;
-            this.score = score;
-        }
-        public String pageId;
-        public double score;
+    public SearchResponse search(final String query, final int page) {
+        return this.search(query, page, PAGE_SIZE);
     }
 
-    public QueryServerResponse search(final String query, final int page) {
-        int type = IndexedWebPage.BODY;
+    public SearchResponse search(final String query, final int page, final int pageSize) {
+        PageRankingResult pageRankingResult = calculateRanking(query);
+        List<PageScoreTuple> pageScoreTupleList = pageRankingResult.getScores();
+        List<String> queryWords = pageRankingResult.getQueryWords();
+        Set<String> queryWordsSet = new HashSet<>(queryWords);
+        final int webPagesSize = pageScoreTupleList.size();
 
+        final int offset = pageSize * (page - 1);
+
+        // Response
+        SearchResponse searchResponse = new SearchResponse();
+        searchResponse.setQuery(query);
+        searchResponse.setResults(new ArrayList<>());
+        searchResponse.setResultsCount(webPagesSize);
+        searchResponse.setPage(page);
+
+        SearchResultEntry[] resultEntries = new SearchResultEntry[pageSize];
+        IntStream.range(0, pageSize).parallel().forEach((i) -> {
+            int order = offset + i;
+            if (order > webPagesSize - 1)
+                return;
+            Optional<IndexedWebPage> indexedWebPageOpt = searchWebPageRepository.findById(
+                    pageScoreTupleList.get(order).pageId);
+            if (indexedWebPageOpt.isEmpty())
+                return;
+            IndexedWebPage indexedWebPage = indexedWebPageOpt.get();
+
+            SearchResultEntry searchResultEntry = new SearchResultEntry();
+            searchResultEntry.setUrl(indexedWebPage.getUrl());
+            searchResultEntry.setTitle(indexedWebPage.getTitle());
+            Stemmer stemmer = new Stemmer();
+            String[] plainTextWordsArr =
+                    nonAlphaNumeric.matcher(indexedWebPage.getPlainText())
+                            .replaceAll("")
+                            .split("[ /]");
+
+            int n = plainTextWordsArr.length;
+            int bestLo = 0, bestHi = Math.min(n, SUMMARY_WINDOW_SIZE), maxMatch = 0, currMatch = 0;
+            // Check the initial window
+            boolean[] isMatch = new boolean[bestHi];
+            for (int pos = 0; pos < bestHi; ++pos) {
+                if (queryWordsSet.contains(stemmer.stem(plainTextWordsArr[pos]))) {
+                    ++currMatch;
+                    isMatch[pos] = true;
+                }
+            }
+            maxMatch = currMatch;
+            for (int pos = bestHi; pos < n; ++pos) {
+                int prevIsMatchIdx = pos % SUMMARY_WINDOW_SIZE;
+                if (isMatch[prevIsMatchIdx]) {
+                    --currMatch;
+                    isMatch[prevIsMatchIdx] = false;
+                }
+                if (queryWordsSet.contains(stemmer.stem(plainTextWordsArr[pos].toLowerCase()))) {
+                    ++currMatch;
+                    isMatch[pos % SUMMARY_WINDOW_SIZE] = true;
+                }
+                if (currMatch > maxMatch) {
+                    maxMatch = currMatch;
+                    if (maxMatch == 1) {
+                        bestLo = pos;
+                        bestHi = pos + SUMMARY_WINDOW_SIZE;
+                    } else {
+                        bestLo = pos - SUMMARY_WINDOW_SIZE;
+                        bestHi = pos;
+                    }
+                }
+            }
+            StringBuilder summaryHTMLSb = new StringBuilder();
+            for (int pos = bestLo; pos <= Math.min(n - 1, bestHi); ++pos) {
+                if (queryWordsSet.contains(stemmer.stem(plainTextWordsArr[pos].toLowerCase()))) {
+                    summaryHTMLSb.append("<b>");
+                    summaryHTMLSb.append(plainTextWordsArr[pos]);
+                    summaryHTMLSb.append("</b> ");
+                } else {
+                    summaryHTMLSb.append(plainTextWordsArr[pos]);
+                    summaryHTMLSb.append(" ");
+                }
+            }
+            if (summaryHTMLSb.length() > 0) {
+                summaryHTMLSb.deleteCharAt(summaryHTMLSb.length() - 1);
+            }
+            if (bestHi < n - 1) {
+                summaryHTMLSb.append("...");
+            }
+            searchResultEntry.setSummaryHTML(summaryHTMLSb.toString());
+            resultEntries[i] = searchResultEntry;
+        });
+        for (int i = 0; i < pageSize; ++i)
+            if (resultEntries[i] != null)
+                searchResponse.getResults().add(resultEntries[i]);
+
+        return searchResponse;
+    }
+
+    public EvaluateResponse evaluate(final String query) {
+        PageRankingResult pageRankingResult = calculateRanking(query);
+        List<PageScoreTuple> pageScoreTupleList = pageRankingResult.getScores();
+        List<String> queryWords = pageRankingResult.getQueryWords();
+        final int webPagesSize = pageScoreTupleList.size();
+
+        int type = IndexedWebPage.BODY;
+        int offset = 0;
+
+        // Response
+        EvaluateResponse evaluateResponse = new EvaluateResponse();
+        evaluateResponse.setQuery(query);
+        evaluateResponse.setResults(new ArrayList<>());
+        evaluateResponse.setResultsCount(webPagesSize);
+        for (int i = 0; i < 50; ++i) {
+            if (i > webPagesSize - 1)
+                break;
+            Optional<IndexedWebPage> indexedWebPageOpt = searchWebPageRepository.findById(
+                    pageScoreTupleList.get(i).pageId);
+            if (indexedWebPageOpt.isEmpty())
+                continue;
+            IndexedWebPage indexedWebPage = indexedWebPageOpt.get();
+
+            EvaluateResultEntry evaluateResultEntry = new EvaluateResultEntry();
+            evaluateResultEntry.setUrl(indexedWebPage.getUrl());
+            evaluateResultEntry.setScore(pageScoreTupleList.get(i).score);
+            evaluateResultEntry.setTitle(indexedWebPage.getTitle());
+            evaluateResultEntry.setReferencesTo(indexedWebPage.getReferencesTo());
+            evaluateResultEntry.setReferencedBy(indexedWebPage.getReferencedBy());
+            evaluateResultEntry.setLastModifiedDate(indexedWebPage.getLastModifiedDate());
+            evaluateResultEntry.setContentLength(indexedWebPage.getContentLength());
+
+            Map<String, Integer> matchedWords = new HashMap<>();
+            for (String word : queryWords) {
+                if (!indexedWebPage.getWordFrequencies(type).containsKey(word))
+                    continue;
+                matchedWords.put(word, indexedWebPage.getWordFrequencies(type).get(word));
+            }
+            evaluateResultEntry.setMatchedWords(matchedWords.entrySet().stream()
+                    .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                    .limit(5)
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
+                            (oldValue, newValue) -> oldValue, LinkedHashMap::new)));
+
+            evaluateResponse.getResults().add(evaluateResultEntry);
+        }
+
+        return evaluateResponse;
+    }
+
+    private PageRankingResult calculateRanking(String query) {
         StemmedText stemmedQueryObj = TextPreprocessing.preprocessTextAndCount(query);
         Map<String, Integer> queryWordCount = stemmedQueryObj.getWordFrequencies();
         List<String> queryWords = queryWordCount.keySet().stream().toList();
@@ -70,7 +216,7 @@ public class SearchService {
         if (pharseMatcher.find()) {
             // When double quote pairs are used
             List<IndexedWebPage> webPagesWithContent =
-                    indexedWebPageRepository.findIndexedWebPagesIgnoreCaseByIdIn(matchedWebPagesIds.stream().toList());
+                    phraseSearchWebPageRepository.findIndexedWebPagesByIdIn(matchedWebPagesIds.stream().toList());
             // Get all phrases
             pharseMatcher.reset();
             List<String> phrases = new ArrayList<>();
@@ -97,7 +243,7 @@ public class SearchService {
         // For web page
         double[] webPagesCosineSimScores = this.getCosineSimilarityScores(stemmedQueryObj, webPageIndexEntries, webPages, IndexedWebPage.BODY, true);
         // For title
-        double[] titlesCosineSimScores = this.getCosineSimilarityScores(stemmedQueryObj, titlePageIndexEntries, webPages, IndexedWebPage.TITLE, false);
+        double[] titlesCosineSimScores = this.getCosineSimilarityScores(stemmedQueryObj, titlePageIndexEntries, webPages, IndexedWebPage.TITLE, true);
 
         // Get page ranks
         double[] pageRanks = this.getPageRanks(webPages);
@@ -120,44 +266,7 @@ public class SearchService {
         // Sort by score in descending order
         pageScoreTupleList.sort((o1, o2) -> Double.compare(o2.score, o1.score));
 
-        int offset = PAGE_SIZE * (page - 1);
-
-        // Response
-        QueryServerResponse searchResponse = new QueryServerResponse();
-        searchResponse.setQuery(query);
-        searchResponse.setResults(new ArrayList<>());
-        searchResponse.setResultsCount(webPagesSize);
-        searchResponse.setPage(page);
-        for (int i = 0; i < PAGE_SIZE; ++i) {
-            int order = offset + i;
-            if (order > webPagesSize - 1)
-                break;
-            Optional<IndexedWebPage> indexedWebPageOpt = indexedWebPageRepository.findById(
-                    pageScoreTupleList.get(order).pageId);
-            if (indexedWebPageOpt.isEmpty())
-                continue;
-            IndexedWebPage indexedWebPage = indexedWebPageOpt.get();
-
-            SearchResultEntry searchResultEntry = new SearchResultEntry();
-            searchResultEntry.setUrl(indexedWebPage.getUrl());
-            searchResultEntry.setScore(pageScoreTupleList.get(i).score);
-            searchResultEntry.setTitle(indexedWebPage.getTitle());
-            searchResultEntry.setReferencesTo(indexedWebPage.getReferencesTo());
-            searchResultEntry.setReferencedBy(indexedWebPage.getReferencedBy());
-            searchResultEntry.setLastModifiedDate(indexedWebPage.getLastModifiedDate());
-
-            Map<String, Integer> matchedWords = new HashMap<>();
-            for (String word : queryWords) {
-                if (!indexedWebPage.getWordFrequencies(type).containsKey(word))
-                    continue;
-                matchedWords.put(word, indexedWebPage.getWordFrequencies(type).get(word));
-            }
-            searchResultEntry.setMatchedWords(matchedWords);
-
-            searchResponse.getResults().add(searchResultEntry);
-        }
-
-        return searchResponse;
+        return PageRankingResult.builder().scores(pageScoreTupleList).queryWords(queryWords).build();
     }
 
     private static boolean containsPhrases(final String text, final List<String> phrases, boolean parallel) {

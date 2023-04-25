@@ -13,7 +13,7 @@ import java.util.Map;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class WebPageResponse {
+public class CrawledWebPageResponse {
     private String id;
     private String url;
     private String title;

@@ -12,10 +12,14 @@ import java.util.List;
 @NoArgsConstructor
 @Builder
 @Data
-public class QueryServerResponse {
+public class SearchResponse {
     public String query;
     public List<SearchResultEntry> results;
     public Long duration;  // Unit: ms
     private int resultsCount;
     private int page;
+
+    public String getFormattedDuration() {
+        return String.format("%.4f s", (double) this.duration.intValue() / 1000);
+    }
 }

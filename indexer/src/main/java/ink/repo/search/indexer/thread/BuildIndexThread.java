@@ -1,13 +1,14 @@
 package ink.repo.search.indexer.thread;
 
+import ink.repo.search.common.dto.CrawledWebPagesRequest;
+import ink.repo.search.common.dto.CrawledWebPagesResponse;
 import ink.repo.search.common.dto.CrawlerTaskResponse;
-import ink.repo.search.common.dto.WebPageResponse;
 import ink.repo.search.common.exception.AttributeAlreadyDefinedException;
 import ink.repo.search.common.exception.NotFoundException;
 import ink.repo.search.common.model.*;
 import ink.repo.search.common.util.HTMLUtils;
 import ink.repo.search.common.util.TextPreprocessing;
-import ink.repo.search.indexer.model.IndexTask;
+import ink.repo.search.indexer.model.IndexerTask;
 import ink.repo.search.indexer.repository.*;
 import org.jsoup.nodes.Document;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,7 @@ import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Component;
 
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -56,18 +58,20 @@ public class BuildIndexThread implements Runnable {
         long before = System.currentTimeMillis();
 
         // Get the index task
-        Optional<IndexTask> indexTaskOpt = indexTaskRepository.findById(this.taskId);
+        Optional<IndexerTask> indexTaskOpt = indexTaskRepository.findById(this.taskId);
         if (indexTaskOpt.isEmpty())
             return;
-        IndexTask indexTask = indexTaskOpt.get();
-        final boolean forceUpdate = indexTask.getForceUpdate() == null ? false : indexTask.getForceUpdate();
+        IndexerTask indexerTask = indexTaskOpt.get();
+        final boolean forceUpdate = indexerTask.getForceUpdate() == null ? false : indexerTask.getForceUpdate();
+        final boolean updateIDF = indexerTask.getUpdateIDF() == null ? true : indexerTask.getUpdateIDF();
+        final boolean updatePageRank = indexerTask.getUpdatePageRank() == null ? false : indexerTask.getUpdatePageRank();
 
         try {
             // Server address
-            String crawlerServerUrlBase = indexTask.getCrawlerServerProtocol() + "://" + indexTask.getCrawlerServerAddr();
+            String crawlerServerUrlBase = indexerTask.getCrawlerServerProtocol() + "://" + indexerTask.getCrawlerServerAddr();
 
             // Get the crawler task
-            final String crawlerTaskId = indexTask.getCrawlerTaskId();
+            final String crawlerTaskId = indexerTask.getCrawlerTaskId();
             CrawlerTaskResponse crawlerTaskResponse = webClientBuilder.build().get()
                     .uri(crawlerServerUrlBase + "/api/v1/task",
                             uriBuilder -> uriBuilder.queryParam("taskId", crawlerTaskId).build())
@@ -81,20 +85,21 @@ public class BuildIndexThread implements Runnable {
             ConcurrentMap<String, WebPageInvertedIndexEntry> webPageInvertedIndexEntryMap = new ConcurrentHashMap<>();
             ConcurrentMap<String, TitleInvertedIndexEntry> titleInvertedIndexEntryMap = new ConcurrentHashMap<>();
 
-            // Process the crawled content of each url visited by the crawler
-            List<String> visitedUrls = crawlerTaskResponse.getVisitedUrls();
-            visitedUrls.stream().parallel().forEach((url) -> {
+            CrawledWebPagesRequest crawledWebPagesRequest = new CrawledWebPagesRequest();
+            crawledWebPagesRequest.setUrls(crawlerTaskResponse.getVisitedUrls());
+            CrawledWebPagesResponse webPages = webClientBuilder.build().post()
+                    .uri(crawlerServerUrlBase + "/api/v1/webpage")
+                    .body(Mono.just(crawledWebPagesRequest), CrawledWebPagesRequest.class)
+                    .retrieve()
+                    .bodyToMono(CrawledWebPagesResponse.class)
+                    .block();
+
+            // Process the crawled content of each web page visited by the crawler
+            webPages.getPages().stream().parallel().forEach((webPageResponse) -> {
                 if (this.isTerminated)
                     return;
 
-                // Fetch web pages from crawler
-                WebPageResponse webPageResponse = webClientBuilder.build().get()
-                        .uri(crawlerServerUrlBase + "/api/v1/webpage",
-                                uriBuilder -> uriBuilder.queryParam("url", url).build())
-                        .retrieve()
-                        .bodyToMono(WebPageResponse.class)
-                        .block();
-
+                String url = webPageResponse.getUrl();
                 IndexedWebPage indexedWebPage = null;
                 Optional<IndexedWebPage> indexedWebPageOpt = indexedWebPageRepository.findIndexedWebPageByUrl(url);
                 if (indexedWebPageOpt.isPresent()) {
@@ -126,6 +131,11 @@ public class BuildIndexThread implements Runnable {
 
                 indexedWebPage.setTitle(webPageResponse.getTitle());
                 indexedWebPage.setUrl(webPageResponse.getUrl());
+                try {
+                    indexedWebPage.setContentLength(Integer.parseInt(webPageResponse.getHeaders().getOrDefault("Content-Length", "0")));
+                } catch (NumberFormatException e) {
+                    indexedWebPage.setContentLength(webPageResponse.getContent().length());
+                }
 
                 indexedWebPage.setLastFetchedDate(new Date());
                 indexedWebPage.setLastModifiedDate(webPageResponse.getLastModifiedDate());
@@ -134,12 +144,10 @@ public class BuildIndexThread implements Runnable {
                 indexedWebPage.setReferencedBy(crawlerTaskResponse.getParentPointers().getOrDefault(webPageResponse.getId(), new ArrayList<>()));
                 indexedWebPage.setPlainText(plainTextPage);
                 // For web content
-                indexedWebPage.setStemmedBody(stemmedBody);
                 indexedWebPage.setBodyWordFrequencies(stemmedBodyObj.getWordFrequencies());
                 indexedWebPage.setBodyStemmedWordCount(stemmedBodyObj.getStemmedWordCount());
                 indexedWebPage.setBodyMaxTf(stemmedBodyObj.getMaxTf());
                 // For title
-                indexedWebPage.setStemmedTitle(stemmedTitle);
                 indexedWebPage.setTitleWordFrequencies(stemmedTitleObj.getWordFrequencies());
                 indexedWebPage.setTitleStemmedWordCount(stemmedTitleObj.getStemmedWordCount());
                 indexedWebPage.setTitleMaxTf(stemmedTitleObj.getMaxTf());
@@ -192,7 +200,8 @@ public class BuildIndexThread implements Runnable {
             // For web page contents
             List<WebPageInvertedIndexEntry> webPageItems = new ArrayList<>();
             for (String word : webPageInvertedIndexEntryMap.keySet()) {
-                Optional<WebPageInvertedIndexEntry> invertedIndexEntryOpt = invertedIndexEntryRepository.findInvertedIndexEntriesByWord(word);
+                Optional<WebPageInvertedIndexEntry> invertedIndexEntryOpt =
+                        invertedIndexEntryRepository.findInvertedIndexEntriesByWord(word);
                 if (invertedIndexEntryOpt.isEmpty()) {
                     webPageItems.add(webPageInvertedIndexEntryMap.get(word));
                 } else {
@@ -210,7 +219,8 @@ public class BuildIndexThread implements Runnable {
             // For titles
             List<TitleInvertedIndexEntry> titleItems = new ArrayList<>();
             for (String word : titleInvertedIndexEntryMap.keySet()) {
-                Optional<TitleInvertedIndexEntry> invertedIndexEntryOpt = titleInvertedIndexEntryRepository.findInvertedIndexEntriesByWord(word);
+                Optional<TitleInvertedIndexEntry> invertedIndexEntryOpt =
+                        titleInvertedIndexEntryRepository.findInvertedIndexEntriesByWord(word);
                 if (invertedIndexEntryOpt.isEmpty()) {
                     titleItems.add(titleInvertedIndexEntryMap.get(word));
                 } else {
@@ -227,33 +237,39 @@ public class BuildIndexThread implements Runnable {
             titleInvertedIndexEntryRepository.saveAll(titleItems);
 
             // Save task
-            indexTask = getCurrentIndexTask();
-            indexTask.setUrls(crawlerTaskResponse.getVisitedUrls());
-            indexTask.setTaskStatus(IndexTask.TASK_STATUS_FINISHED);
-            indexTask.setDuration(System.currentTimeMillis() - before);
-            indexTaskRepository.save(indexTask);
+            indexerTask = getCurrentIndexTask();
+            indexerTask.setUrls(crawlerTaskResponse.getVisitedUrls());
+            indexerTask.setTaskStatus(IndexerTask.TASK_STATUS_FINISHED);
+            indexerTask.setDuration(System.currentTimeMillis() - before);
+            indexTaskRepository.save(indexerTask);
 
             // Update all inverted index's IDF
-            IDFUpdateThread idfUpdateThread = applicationContext.getBean(IDFUpdateThread.class);
-            taskExecutor.execute(idfUpdateThread);
+            if (updateIDF) {
+                IDFUpdateThread idfUpdateThread = applicationContext.getBean(IDFUpdateThread.class);
+                taskExecutor.execute(idfUpdateThread);
+            }
+            if (updatePageRank) {
+                PageRankUpdateThread pageRankUpdateThread = applicationContext.getBean(PageRankUpdateThread.class);
+                taskExecutor.execute(pageRankUpdateThread);
+            }
         } catch (Exception e) {
             e.printStackTrace();
-            indexTask.setTaskStatus(IndexTask.TASK_STATUS_ERROR);
-            indexTaskRepository.save(indexTask);
+            indexerTask.setTaskStatus(IndexerTask.TASK_STATUS_ERROR);
+            indexTaskRepository.save(indexerTask);
         }
         System.out.println("Index built in " + (System.currentTimeMillis() - before) + " ms");
     }
 
     private void checkStopped() throws NotFoundException {
-        IndexTask indexTask = getCurrentIndexTask();
-        if (indexTask.getTaskStatus() == IndexTask.TASK_STATUS_STOPPED ||
-                indexTask.getTaskStatus() == IndexTask.TASK_STATUS_FINISHED ||
-                indexTask.getTaskStatus() == IndexTask.TASK_STATUS_ERROR)
+        IndexerTask indexerTask = getCurrentIndexTask();
+        if (indexerTask.getTaskStatus() == IndexerTask.TASK_STATUS_STOPPED ||
+                indexerTask.getTaskStatus() == IndexerTask.TASK_STATUS_FINISHED ||
+                indexerTask.getTaskStatus() == IndexerTask.TASK_STATUS_ERROR)
             this.isTerminated = true;
     }
 
-    private IndexTask getCurrentIndexTask() throws NotFoundException {
-        Optional<IndexTask> optional = indexTaskRepository.findById(this.taskId);
+    private IndexerTask getCurrentIndexTask() throws NotFoundException {
+        Optional<IndexerTask> optional = indexTaskRepository.findById(this.taskId);
         if (optional.isEmpty())
             throw new NotFoundException();
         return optional.get();

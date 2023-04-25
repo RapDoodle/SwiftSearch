@@ -1,9 +1,8 @@
 package ink.repo.search.indexer.service;
 
 import ink.repo.search.common.exception.AttributeAlreadyDefinedException;
-import ink.repo.search.common.exception.NotFoundException;
 import ink.repo.search.indexer.dto.IndexerTaskRequest;
-import ink.repo.search.indexer.model.IndexTask;
+import ink.repo.search.indexer.model.IndexerTask;
 import ink.repo.search.indexer.repository.IndexTaskRepository;
 import ink.repo.search.indexer.thread.BuildIndexThread;
 import lombok.RequiredArgsConstructor;
@@ -24,18 +23,20 @@ public class IndexService {
     @Autowired
     private final TaskExecutor taskExecutor;
 
-    public void createIndex(IndexerTaskRequest indexTaskRequest) throws NotFoundException, AttributeAlreadyDefinedException {
+    public void createIndex(IndexerTaskRequest indexTaskRequest) throws AttributeAlreadyDefinedException {
         // Create task
-        IndexTask indexTask = new IndexTask();
-        indexTask.setTaskStatus(IndexTask.TASK_STATUS_CREATED);
-        indexTask.setCrawlerServerProtocol(indexTaskRequest.getCrawlerServerProtocol());
-        indexTask.setCrawlerServerAddr(indexTaskRequest.getCrawlerServerAddr());
-        indexTask.setCrawlerTaskId(indexTaskRequest.getCrawlerTaskId());
-        indexTask.setForceUpdate(indexTaskRequest.getForceUpdate());
-        indexTaskRepository.save(indexTask);
+        IndexerTask indexerTask = new IndexerTask();
+        indexerTask.setTaskStatus(IndexerTask.TASK_STATUS_CREATED);
+        indexerTask.setCrawlerServerProtocol(indexTaskRequest.getCrawlerServerProtocol());
+        indexerTask.setCrawlerServerAddr(indexTaskRequest.getCrawlerServerAddr());
+        indexerTask.setCrawlerTaskId(indexTaskRequest.getCrawlerTaskId());
+        indexerTask.setForceUpdate(indexTaskRequest.getForceUpdate());
+        indexerTask.setUpdateIDF(indexTaskRequest.getUpdateIDF());
+        indexerTask.setUpdatePageRank(indexTaskRequest.getUpdatePageRank());
+        indexTaskRepository.save(indexerTask);
 
         BuildIndexThread buildIndexThread = applicationContext.getBean(BuildIndexThread.class);
-        buildIndexThread.setTaskId(indexTask.getId());
+        buildIndexThread.setTaskId(indexerTask.getId());
         taskExecutor.execute(buildIndexThread);
     }
 }

@@ -42,6 +42,7 @@ public class IndexedWebPage {
     private Integer titleStemmedWordCount;
     private Integer bodyMaxTf;
     private Integer titleMaxTf;
+    private Integer contentLength;
 
     public Map<String, Integer> getWordFrequencies(int type) {
         return switch (type) {

@@ -1,27 +1,25 @@
 package ink.repo.search.core.controller;
 
+import ink.repo.search.common.dto.EvaluateResponse;
 import ink.repo.search.common.dto.SearchResponse;
 import ink.repo.search.core.service.SearchService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.lang.Nullable;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/search")
+@RequestMapping("/api/v1/evaluate")
 @RequiredArgsConstructor
-public class SearchController {
+public class EvaluateController {
     @Autowired
     private SearchService searchService;
 
     @GetMapping
-    public SearchResponse search(String query, @Nullable Integer page) {
+    public EvaluateResponse evaluate(String query) {
         long beginTime = System.currentTimeMillis();
-        if (page == null)
-            page = 1;
-        SearchResponse response = searchService.search(query, page);
+        EvaluateResponse response = searchService.evaluate(query);
         response.setDuration(System.currentTimeMillis() - beginTime);
         return response;
     }

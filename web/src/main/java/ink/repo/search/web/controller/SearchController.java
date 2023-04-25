@@ -1,6 +1,7 @@
 package ink.repo.search.web.controller;
 
-import ink.repo.search.common.dto.QueryServerResponse;
+import ink.repo.search.common.dto.EvaluateResponse;
+import ink.repo.search.common.dto.SearchResponse;
 import ink.repo.search.web.service.SearchService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -22,7 +23,6 @@ public class SearchController {
     @RequestMapping("/search")
     public String searchResults(Model model, @RequestParam(value="query", required=true) String query,
                         @RequestParam(value="page", required=false, defaultValue="1") String page) {
-        // TODO: Reject empty query
         int pageNum;
         try {
             pageNum = Integer.parseInt(page);
@@ -30,9 +30,11 @@ public class SearchController {
             // TODO: Return error page informing bad request
             return "400";
         }
-        QueryServerResponse queryServerResponse = searchService.search(query, pageNum);
-        System.out.println(queryServerResponse);
-        model.addAttribute("queryResult", queryServerResponse);
+        if (query.length() == 0) {
+            return "400";
+        }
+        SearchResponse searchResponse = searchService.search(query, pageNum);
+        model.addAttribute("queryResult", searchResponse);
 
         return "searchResults";
     }
@@ -48,9 +50,8 @@ public class SearchController {
             // TODO: Return error page informing bad request
             return "400";
         }
-        QueryServerResponse queryServerResponse = searchService.search(query, pageNum);
-        System.out.println(queryServerResponse);
-        model.addAttribute("queryResult", queryServerResponse);
+        EvaluateResponse evaluateResponse = searchService.evaluate(query);
+        model.addAttribute("queryResult", evaluateResponse);
 
         return "evaluate";
     }

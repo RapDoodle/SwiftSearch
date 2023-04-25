@@ -1,7 +1,7 @@
 package ink.repo.search.web.service;
 
-import ink.repo.search.common.dto.CrawlerTaskResponse;
-import ink.repo.search.common.dto.QueryServerResponse;
+import ink.repo.search.common.dto.EvaluateResponse;
+import ink.repo.search.common.dto.SearchResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -18,16 +18,26 @@ public class SearchService {
     @Value("${swift-search.query-server.port}")
     private String queryServerPort;
 
-    public QueryServerResponse search(String query, int page) {
+    public SearchResponse search(String query, int page) {
         final String serverUrlBase = queryServerProtocol + "://" + queryServerAddr + ":" + queryServerPort;
-        System.out.println(serverUrlBase);
-        QueryServerResponse queryServerResponse = webClientBuilder.build().get()
+        SearchResponse queryServerResponse = webClientBuilder.build().get()
                 .uri(serverUrlBase + "/api/v1/search",
                         uriBuilder -> uriBuilder.queryParam("query", query).queryParam("page", page).build())
                 .retrieve()
-                .bodyToMono(QueryServerResponse.class)
+                .bodyToMono(SearchResponse.class)
                 .block();
         return queryServerResponse;
+    }
+
+    public EvaluateResponse evaluate(String query) {
+        final String serverUrlBase = queryServerProtocol + "://" + queryServerAddr + ":" + queryServerPort;
+        EvaluateResponse evaluateResponse = webClientBuilder.build().get()
+                .uri(serverUrlBase + "/api/v1/evaluate",
+                        uriBuilder -> uriBuilder.queryParam("query", query).build())
+                .retrieve()
+                .bodyToMono(EvaluateResponse.class)
+                .block();
+        return evaluateResponse;
     }
 
 }

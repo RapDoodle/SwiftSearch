@@ -11,7 +11,5 @@ import java.util.Optional;
 @Component
 @Repository
 public interface WebPageInvertedIndexEntryRepository extends MongoRepository<WebPageInvertedIndexEntry, String> {
-
     Optional<WebPageInvertedIndexEntry> findInvertedIndexEntriesByWord(String word);
-
 }

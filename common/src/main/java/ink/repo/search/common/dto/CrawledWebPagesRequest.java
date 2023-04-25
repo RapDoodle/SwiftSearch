@@ -5,11 +5,12 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class WebPageRequest {
-    private String id;
-    private String url;
+public class CrawledWebPagesRequest {
+    private List<String> urls;
 }

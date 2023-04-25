@@ -38,9 +38,7 @@
   <!-- Main Content -->
     <main role="main">
     <div id="main">
-      <p class="results-stats">
-        There are <span id="results" th:text="${queryResult.getResultsCount()}"></span> results. Request completed in <span th:text="${queryResult.getDuration()}"></span> ms. Current Page: <span id="pageNum" th:text="${queryResult.getPage()}"></span>
-      </p>
+      <p class="results-stats" th:text="${''.concat(queryResult.getResultsCount()).concat(' results completed in ').concat(queryResult.getFormattedDuration())}" />
       <div class="search-results-block">
         <!-- Search Results -->
 
@@ -49,7 +47,7 @@
           <a th:href="${resultEntry.getUrl()}">
             <h3 th:text="${resultEntry.getTitle()}" />
           </a>
-          <p class="result-text" th:text="${resultEntry.getTitle()}" /></p>
+          <p class="result-text" th:utext="${resultEntry.getSummaryHTML()}" /></p>
         </div>
       </div>
 

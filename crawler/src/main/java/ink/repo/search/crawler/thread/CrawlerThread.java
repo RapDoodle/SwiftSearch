@@ -121,7 +121,8 @@ public class CrawlerThread implements Runnable {
                         boolean fetch = true;
                         Date lastModifiedDate = null;
                         if (headers.getOrDefault("Last-Modified", null) != null) {
-                            SimpleDateFormat formatter = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.ENGLISH);
+                            SimpleDateFormat formatter =
+                                    new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.ENGLISH);
                             lastModifiedDate = formatter.parse(headers.get("Last-Modified"));
                             if (webPage.getResponseStatusCode() != null &&
                                     webPage.getResponseStatusCode() >= 200 &&

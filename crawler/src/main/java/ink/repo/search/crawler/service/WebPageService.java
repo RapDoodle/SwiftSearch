@@ -1,16 +1,20 @@
 package ink.repo.search.crawler.service;
 
-import ink.repo.search.common.dto.WebPageRequest;
+import ink.repo.search.common.dto.CrawledWebPageRequest;
+import ink.repo.search.common.dto.CrawledWebPageResponse;
+import ink.repo.search.common.dto.CrawledWebPagesRequest;
+import ink.repo.search.common.dto.CrawledWebPagesResponse;
 import ink.repo.search.crawler.exception.ArgumentNotFoundException;
 import ink.repo.search.crawler.exception.NotFoundException;
 import ink.repo.search.crawler.model.WebPage;
-import ink.repo.search.crawler.model.WebPageResponse;
 import ink.repo.search.crawler.repository.WebPageRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -20,14 +24,14 @@ public class WebPageService {
     @Autowired
     private final WebPageRepository webPageRepository;
 
-    public WebPageResponse getWebPage(WebPageRequest webPageRequest) throws NotFoundException, ArgumentNotFoundException {
+    public CrawledWebPageResponse getWebPage(CrawledWebPageRequest crawledWebPageRequest) throws NotFoundException, ArgumentNotFoundException {
         Optional<WebPage> webPageOptional = null;
-        if (webPageRequest.getId() != null)
+        if (crawledWebPageRequest.getId() != null)
             // Try to get by id
-            webPageOptional = webPageRepository.findById(webPageRequest.getId());
-        else if (webPageRequest.getUrl() != null)
+            webPageOptional = webPageRepository.findById(crawledWebPageRequest.getId());
+        else if (crawledWebPageRequest.getUrl() != null)
             // Try to get by url
-            webPageOptional = webPageRepository.findByUrl(webPageRequest.getUrl());
+            webPageOptional = webPageRepository.findByUrl(crawledWebPageRequest.getUrl());
         else
             throw new ArgumentNotFoundException();
 
@@ -38,17 +42,19 @@ public class WebPageService {
             throw new NotFoundException();
 
         // Response
-        WebPageResponse response = new WebPageResponse();
-        response.setId(webPage.getId());
-        response.setUrl(webPage.getUrl());
-        response.setTitle(webPage.getTitle());
-        response.setResponseStatusCode(webPage.getResponseStatusCode());
-        response.setHeaders(webPage.getHeaders());
-        response.setContent(webPage.getContent());
-        response.setLinks(webPage.getLinks());
-        response.setCreatedDate(webPage.getCreatedDate());
-        response.setLastFetchedDate(webPage.getLastFetchedDate());
-        response.setLastModifiedDate(webPage.getLastModifiedDate());
+        CrawledWebPageResponse response = webPage.toResponse();
         return response;
+    }
+
+    public CrawledWebPagesResponse getWebPages(CrawledWebPagesRequest crawledWebPagesRequest) {
+        List<String> urls = crawledWebPagesRequest.getUrls();
+        List<WebPage> webPages = webPageRepository.findWebPagesByUrlIn(urls);
+        List<CrawledWebPageResponse> webPagesResponse = new ArrayList<>();
+        for (WebPage webPage : webPages) {
+            webPagesResponse.add(webPage.toResponse());
+        }
+        CrawledWebPagesResponse crawledWebPagesResponse = new CrawledWebPagesResponse();
+        crawledWebPagesResponse.setPages(webPagesResponse);
+        return crawledWebPagesResponse;
     }
 }

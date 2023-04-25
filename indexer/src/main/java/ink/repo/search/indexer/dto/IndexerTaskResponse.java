@@ -1,6 +1,6 @@
 package ink.repo.search.indexer.dto;
 
-public class IndexTaskResponse {
+public class IndexerTaskResponse {
     private String id;
     private String crawlerServerAddr;
     private String crawlerServerProtocol;

@@ -8,12 +8,12 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.List;
 
-@Document(value = "indexTasks")
+@Document(value = "indexerTasks")
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
 @Data
-public class IndexTask {
+public class IndexerTask {
     public static final int TASK_STATUS_CREATED = 0;
     public static final int TASK_STATUS_RUNNING = 1;
     public static final int TASK_STATUS_FINISHED = 2;
@@ -30,4 +30,6 @@ public class IndexTask {
     private int totalUrls;
     private long duration;
     private Boolean forceUpdate;
+    private Boolean updateIDF;
+    private Boolean updatePageRank;
 }

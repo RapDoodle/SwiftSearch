@@ -10,7 +10,5 @@ import java.util.Optional;
 @Component
 @Repository
 public interface IndexedWebPageRepository extends MongoRepository<IndexedWebPage, String> {
-
     Optional<IndexedWebPage> findIndexedWebPageByUrl(String url);
-
 }

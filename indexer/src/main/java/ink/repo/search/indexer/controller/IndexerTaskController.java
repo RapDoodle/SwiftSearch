@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/task/index")
 @RequiredArgsConstructor
-public class IndexTaskController {
+public class IndexerTaskController {
     @Autowired
     private IndexService indexService;
 

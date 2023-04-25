@@ -14,4 +14,6 @@ public class IndexerTaskRequest {
     private String crawlerServerProtocol;
     private String crawlerTaskId;
     private Boolean forceUpdate;
+    private Boolean updateIDF;
+    private Boolean updatePageRank;
 }

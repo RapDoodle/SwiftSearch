@@ -1,23 +1,21 @@
 package ink.repo.search.common.util;
 
-import com.sun.jdi.event.StepEvent;
 import ink.repo.search.common.model.StemmedText;
-import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.springframework.util.ResourceUtils;
 
 import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class TextPreprocessing {
     private static final String STOP_WORDS_PATH = "/assets/stopwords.txt";
     private static final Set<String> stopWords = new HashSet<>();
+    public static final Pattern nonAlphaNumeric = Pattern.compile("[^a-zA-Z0-9]");
 
     static {
         try {
@@ -41,12 +39,12 @@ public class TextPreprocessing {
         int lineCount = 0, stemmedWordCount = 0, maxTf = 0;
         for (final String line : text.lines().toList()) {
             ++lineCount;
-            String[] words = line.split(" ");
+            String[] words = line.split("[ /]");
             int lineWordCount = 0;
             for (String word : words) {
                 word = word.toLowerCase();
                 // Remove non-alphanumeric characters
-                word = word.replaceAll("[^a-z0-9]", "");
+                word = nonAlphaNumeric.matcher(word).replaceAll("");
                 if (word.length() == 0)
                     continue;
                 // Skip if word is in the list of stop words
