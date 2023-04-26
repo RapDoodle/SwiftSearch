@@ -96,7 +96,7 @@
 	var Td = document.createElement('td');
 	Td.class = "pager-td";
 	var a = document.createElement('a');
-	a.setAttribute('style', 'color:black;Font-size:18px;Font-weight:normal');
+	a.setAttribute('style', 'color:black;Font-size:14px;Font-weight:normal');
 	a.setAttribute("onmouseover","this.style.color='purple';");
 	if(page <= 1){
       a.href = "http://127.0.0.1:8610/search?query="+query+"&page="+1+"#";
@@ -136,10 +136,10 @@
 		aTd.class = "pager-td";
 		var ba = document.createElement('a');
 		ba.href = "http://127.0.0.1:8610/search?query="+query+"&page="+(i)+"#";
-		ba.setAttribute('style', 'color:black;Font-size:18px;Font-weight:normal');
+		ba.setAttribute('style', 'color:black;Font-size:14px;Font-weight:normal');
 		ba.setAttribute("onmouseover","this.style.color='purple';");
 		if(i == page){
-		  ba.setAttribute("style", "color:black;Font-size:18px;Font-weight:bold");
+		  ba.setAttribute("style", "color:black;Font-size:14px;Font-weight:bold");
 		  ba.style.textDecorationLine = "underline";
 		}
 		ba.innerHTML = i;
@@ -156,7 +156,7 @@
 	var d = document.createElement('td');
 	d.class = "pager-td";
 	var c = document.createElement('a');
-	c.setAttribute('style', 'color:black;Font-size:18px;Font-weight:normal');
+	c.setAttribute('style', 'color:black;Font-size:14px;Font-weight:normal');
 	c.setAttribute("onmouseover","this.style.color='purple';");
 	if(page >= num){
       c.href = "http://127.0.0.1:8610/search?query="+query+"&page="+num+"#";
