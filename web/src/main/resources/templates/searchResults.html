@@ -99,9 +99,9 @@
 	a.setAttribute('style', 'color:black;Font-size:14px;Font-weight:normal');
 	a.setAttribute("onmouseover","this.style.color='purple';");
 	if(page <= 1){
-      a.href = "http://127.0.0.1:8610/search?query="+query+"&page="+1+"#";
+      a.href = "search?query="+query+"&page="+1+"#";
     }else{
-      a.href = "http://127.0.0.1:8610/search?query="+query+"&page="+(page-1)+"#";
+      a.href = "search?query="+query+"&page="+(page-1)+"#";
     }
     if(num == 0){
       a.innerHTML = '';
@@ -135,7 +135,7 @@
 		var aTd = document.createElement('td');
 		aTd.class = "pager-td";
 		var ba = document.createElement('a');
-		ba.href = "http://127.0.0.1:8610/search?query="+query+"&page="+(i)+"#";
+		ba.href = "search?query="+query+"&page="+(i)+"#";
 		ba.setAttribute('style', 'color:black;Font-size:14px;Font-weight:normal');
 		ba.setAttribute("onmouseover","this.style.color='purple';");
 		if(i == page){
@@ -159,9 +159,9 @@
 	c.setAttribute('style', 'color:black;Font-size:14px;Font-weight:normal');
 	c.setAttribute("onmouseover","this.style.color='purple';");
 	if(page >= num){
-      c.href = "http://127.0.0.1:8610/search?query="+query+"&page="+num+"#";
+      c.href = "search?query="+query+"&page="+num+"#";
     }else{
-      c.href = "http://127.0.0.1:8610/search?query="+query+"&page="+(page+1)+"#";
+      c.href = "search?query="+query+"&page="+(page+1)+"#";
     }
 	if(num == 0){
       c.innerHTML = '';
