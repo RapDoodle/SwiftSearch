@@ -16,8 +16,8 @@
   <header>
     <!-- Logo -->
     <div class="logo-area">
-      <a href="#" title="Go to Swift Search">
-        <img src="images/swift-logo.png" alt="Swift" class="logo">
+      <a th:name="${queryResult.getPage()}" id="pageNum" href="#" title="Go to Swift Search">
+        <img src="images/swift-logo.png" alt="Swift" style="position:relative;top:20px" class="logo">
       </a>
     </div>
     <!-- Search -->
@@ -38,7 +38,7 @@
   <!-- Main Content -->
     <main role="main">
     <div id="main">
-      <p class="results-stats" th:text="${''.concat(queryResult.getResultsCount()).concat(' results completed in ').concat(queryResult.getFormattedDuration())}" />
+      <p class="results-stats" th:id="${queryResult.getResultsCount()}" th:text="${''.concat(queryResult.getResultsCount()).concat(' results completed in ').concat(queryResult.getFormattedDuration())}" />
       <div class="search-results-block">
         <!-- Search Results -->
 
@@ -51,7 +51,11 @@
         </div>
       </div>
 
-      
+      <div>
+        <a href="#" title="Go to Swift Search">
+          <img src="images/swift-logo.png" alt="Swift" style="position:relative;left:270px" class="logo">
+        </a>
+      </div>
       <!-- Pager -->
       <table class="pager" role="presentation">
         <tr id="pageResult">
@@ -69,7 +73,7 @@
       <div class="location-row">
         <span class="circle"></span>
         <span class="moonland">Hong Kong</span>
-        <span class="loc">- From your Internet address -</span>
+        <span class="loc">- From your IP address -</span>
         <a href="#" class="footer-loc-link">Use precise location</a>
       </div>
     </div>
@@ -77,16 +81,16 @@
       <a href="#" class="footer-link">Help</a>
       <a href="#" class="footer-link">Send feedback</a>
       <a href="#" class="footer-link">Privacy</a>
-      <a href="#" class="footer-link">Learn more</a>
+      <a href="#" class="footer-link">Terms</a>
     </div>
   </footer>
   <script type="text/javascript">
-    var num = Math.ceil(parseInt(document.getElementById('results').innerText) / 10);
+    var num = Math.ceil(parseInt(document.getElementsByClassName('results-stats')[0].id) / 10);
     var target=document.getElementById('footId');
     if(num == 0){
       target.style.display="none";
     }
-    var page = parseInt(document.getElementById('pageNum').innerText);
+    var page = parseInt(document.getElementById('pageNum').name);
     var query = document.getElementById('queryValue').value;
 	var oTR = document.getElementById('pageResult');
 	var Td = document.createElement('td');
@@ -106,8 +110,21 @@
     }
 	Td.appendChild(a);
 	oTR.appendChild(Td);
-
-	for (var i = 0; i < num; i++) {
+    var start = page-5;
+    var end = start+9;
+    if(start<1){
+      start = 1;
+      end = start+9;
+    }
+    if(end>num){
+      end = num;
+      start = end-9;
+    }
+    if(num<=10){
+      start = 1;
+      end = num;
+    }
+	for (var i = start; i <= end; i++) {
 	    var block = document.createElement('td');
         block.class = "pager-td";
         var blo = document.createElement('span');
@@ -118,10 +135,14 @@
 		var aTd = document.createElement('td');
 		aTd.class = "pager-td";
 		var ba = document.createElement('a');
-		ba.href = "http://127.0.0.1:8610/search?query="+query+"&page="+(i+1)+"#";
+		ba.href = "http://127.0.0.1:8610/search?query="+query+"&page="+(i)+"#";
 		ba.setAttribute('style', 'color:black;Font-size:18px;Font-weight:normal');
 		ba.setAttribute("onmouseover","this.style.color='purple';");
-		ba.innerHTML = i+1;
+		if(i == page){
+		  ba.setAttribute("style", "color:black;Font-size:18px;Font-weight:bold");
+		  ba.style.textDecorationLine = "underline";
+		}
+		ba.innerHTML = i;
 		aTd.appendChild(ba);
 		oTR.appendChild(aTd);
 	};
