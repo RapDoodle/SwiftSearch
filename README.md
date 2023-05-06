@@ -33,7 +33,7 @@ The information retrieval system is based on microservice architecture. Componen
 2. If you are on Linux/MacOS, you can directly execute the compile script.
 
     ```bash
-    $ chmod +x ./build.sh
+    $ sudo chmod +x ./build.sh
     $ ./build.sh
     ```
 
