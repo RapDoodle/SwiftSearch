@@ -1,3 +1,6 @@
+# Compiled executables
+executables/
+
 # Compiled class file
 *.class
 

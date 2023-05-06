@@ -19,10 +19,10 @@ SwiftSearch is a simple search engine that implements:
 <img src=".github/architecture.png?raw=true" height="250">
 
 The information retrieval system is based on microservice architecture. Components are independent programs that reside on the same/different server. They communicate with each other using well-defined APIs.
-- Crawler fetches and stores web pages in database
+- Crawler fetches and stores web pages in the database
 - Indexer fetches the crawled web pages from the crawler and then builds and updates its index
-- Query engine uses index built by indexer to respond to queries
-- Web servers provide a web interface to users and forward the request to query engine.
+- Query engine uses index built by the indexer to respond to queries
+- Web servers provide a web interface to users and forward the request to the query engine.
 
 ## Installation
 
@@ -30,37 +30,52 @@ The information retrieval system is based on microservice architecture. Componen
 
 1. Make sure [`JDK`](https://www.oracle.com/java/technologies/downloads/) (17+) and [`MongoDB`](https://www.mongodb.com/try/download/community) are installed.
 
-1. Compile the `common` module, which contains shared code for different system components.
+2. If you are on Linux/MacOS, you can directly execute the compile script.
 
     ```bash
-    cd common
-    ./mvnw clean install
-    cd ..
+    $ chmod +x ./build.sh
+    $ ./build.sh
     ```
 
-1. Compile and package the crawler, indexer, query engine, and web server. You can directly run the following script to compile all components
+    Otherwise, you need to compile everything manual by following the commands provided. 
+    1. Compile the `common` module, which contains shared code for different system components.
 
-    ```bash
-    # Crawler
-    cd crawler
-    ./mvnw clean package
-    cd ..
+        ```bash
+        cd common
+        ./mvnw clean install
+        cd ..
+        ```
 
-    # Indexer
-    cd indexer
-    ./mvnw clean package
-    cd ..
+    2. Compile and package the crawler, indexer, query engine, and web server. You can directly run the following script to compile all components
 
-    # Query engine
-    cd query
-    ./mvnw clean package
-    cd ..
+        ```bash
+        # Create a directory for executables
+        mkdir executables
 
-    # Web server
-    cd web
-    ./mvnw clean package
-    cd ..
-    ```
+        # Crawler
+        cd crawler
+        ./mvnw clean package
+        cp ./target/crawler-*.jar ../executables
+        cd ..
+
+        # Indexer
+        cd indexer
+        ./mvnw clean package
+        cp ./target/indexer-*.jar ../executables
+        cd ..
+
+        # Query engine
+        cd query
+        ./mvnw clean package
+        cp ./target/query-*.jar ../executables
+        cd ..
+
+        # Web server
+        cd web
+        cp ./target/web-*.jar ../executables
+        ./mvnw clean package
+        cd ..
+        ```
 
 ## Usage
 ### Start a crawler task
@@ -73,13 +88,12 @@ The information retrieval system is based on microservice architecture. Componen
 1. Start the application
 
     ```bash
-    $ cd crawler
-    
-    # Choose one of the two command to run the application
+    # Choose one of the two commands to run the application
     # Option 1:
-    $ java -jar ./target/crawler-*.jar
+    $ java -jar ./executables/crawler-*.jar
 
     # Option 2:
+    $ cd crawler
     $ ./mvnw spring-boot:run
     ```
 
@@ -104,7 +118,7 @@ The information retrieval system is based on microservice architecture. Componen
     }'
     ```
 
-    `<CRAWLER_IP_ADDR>` should be replace with crawler's IP address. If you are accessing locally, it is `127.0.0.1`. Otherwise, if you wish to control it remotely, you may need to configure the firewall, and replace `<CRAWLER_IP_ADDR>` with the crawler's IP address.
+    `<CRAWLER_IP_ADDR>` should be replaced with the crawler's IP address. If you are accessing locally, it is `127.0.0.1`. Otherwise, if you wish to control it remotely, you may need to configure the firewall and replace `<CRAWLER_IP_ADDR>` with the crawler's IP address.
 
 2. Then, you will get a response like this
 
@@ -115,7 +129,7 @@ The information retrieval system is based on microservice architecture. Componen
     }
     ```
 
-    The `taskId` is an indentifier for the task. You will need it for the indexer to build indexes.
+    The `taskId` is an identifier for the task. You will need it for the indexer to build indexes.
 
 ## Starting an indexer task
 
@@ -128,13 +142,12 @@ The information retrieval system is based on microservice architecture. Componen
 1. Start the application
 
     ```bash
-    $ cd indexer
-    
-    # Choose one of the two command to run the application
+    # Choose one of the two commands to run the application
     # Option 1:
-    $ java -jar ./target/indexer-*.jar
+    $ java -jar ./executables/indexer-*.jar
 
     # Option 2:
+    $ cd indexer
     $ ./mvnw spring-boot:run
     ```
 
@@ -164,9 +177,9 @@ The information retrieval system is based on microservice architecture. Componen
 
 ## Starting a query engine
 
-Usually, the query engine and indexer should reside on the same server. But, they can also reside on two separate servers. In that case, you need to ensure they have a high-speed connection so that the query engine have fast access to the MongoDB database, which contains the index.
+Usually, the query engine and indexer should reside on the same server. But they can also reside on two separate servers. In that case, you need to ensure they have a high-speed connection so that the query engine has fast access to the MongoDB database, which contains the index.
 
-At this stage, the crawler, indexer are no longer needed. You can terminate them to save computing resources.
+At this stage, the crawler and indexer are no longer needed. You can terminate them to save computing resources.
 
 1. If the indexer and query engine reside on different server, configure `query/src/main/resources/application.properties`
 
@@ -178,13 +191,12 @@ At this stage, the crawler, indexer are no longer needed. You can terminate them
 1. Start the query engine
 
     ```bash
-    $ cd query
-    
-    # Choose one of the two command to run the application
+    # Choose one of the two commands to run the application
     # Option 1:
-    $ java -jar ./target/query-*.jar
+    $ java -jar ./executables/query-*.jar
 
     # Option 2:
+    $ cd query
     $ ./mvnw spring-boot:run
     ```
 
@@ -198,7 +210,7 @@ At this stage, the crawler, indexer are no longer needed. You can terminate them
 
 ### Starting a web server
 
-The web server uses the query engine's API and respond to user requests.
+The web server uses the query engine's API and responds to user requests.
 
 1. Start the query engine
 
